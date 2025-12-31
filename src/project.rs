@@ -120,8 +120,3 @@ fn scan_go() -> Option<ProjectInfo> {
     
     Some(ProjectInfo { file: "go.mod", source: "go", packages })
 }
-
-#[cfg(test)]
-mod tests {
-    // Integration tests cover this - requires filesystem
-}

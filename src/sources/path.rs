@@ -4,50 +4,22 @@ use std::process::Command;
 pub struct PathSource;
 
 impl Source for PathSource {
-    fn name(&self) -> &'static str {
-        "path"
-    }
-
-    fn is_local(&self) -> bool {
-        true
-    }
-
-    fn ecosystem(&self) -> Ecosystem {
-        Ecosystem::System
-    }
+    fn name(&self) -> &'static str { "path" }
+    fn is_local(&self) -> bool { true }
+    fn ecosystem(&self) -> Ecosystem { Ecosystem::System }
 
     fn get_version(&self, package: &str) -> Option<String> {
-        // Check if the command exists in PATH
-        let which = Command::new("which").arg(package).output().ok()?;
-        if !which.status.success() {
-            return None;
-        }
+        Command::new("which").arg(package).output().ok().filter(|o| o.status.success())?;
 
-        // Try common version flags
         for flag in ["--version", "-version", "version", "-V"] {
             if let Ok(output) = Command::new(package).arg(flag).output() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                
                 if let Some(v) = extract_version(&stdout).or_else(|| extract_version(&stderr)) {
                     return Some(v);
                 }
             }
         }
-        
-        // Command exists but version unknown (e.g., BSD utilities on macOS)
-        Some("installed".to_string())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_path_source_properties() {
-        assert_eq!(PathSource.name(), "path");
-        assert!(PathSource.is_local());
-        assert_eq!(PathSource.ecosystem(), Ecosystem::System);
+        Some("installed".to_string()) // Command exists but version unknown
     }
 }

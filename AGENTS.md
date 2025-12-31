@@ -61,6 +61,7 @@ When ending a session, complete ALL steps:
 ```
 src/
 ├── main.rs          # CLI, lookup engine, output formatting
+├── cache.rs         # Response caching (~/.cache/latest/)
 ├── config.rs        # Configuration (~/.config/latest/config.toml)
 ├── project.rs       # Project file scanning
 └── sources/

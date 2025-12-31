@@ -115,8 +115,6 @@ cargo test            # Run tests
 cargo run -- node     # Run directly
 ```
 
-See [SPEC.md](SPEC.md) for technical details and extension guide.
-
 ## License
 
 MIT
