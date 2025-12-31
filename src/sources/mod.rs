@@ -2,6 +2,7 @@ mod path;
 mod brew;
 mod pip;
 mod uv;
+mod apt;
 
 use serde::Deserialize;
 use std::process::Command;
@@ -76,6 +77,7 @@ pub use path::PathSource;
 pub use brew::BrewSource;
 pub use pip::PipSource;
 pub use uv::UvSource;
+pub use apt::AptSource;
 
 // JSON API sources - no CLI needed, just HTTP
 static NPM: JsonApiSource = JsonApiSource {
@@ -141,6 +143,7 @@ macro_rules! define_sources {
 define_sources! {
     "path",  Path  => PathSource,  true,  Ecosystem::System;
     "brew",  Brew  => BrewSource,  false, Ecosystem::System;
+    "apt",   Apt   => AptSource,   false, Ecosystem::System;
     "npm",   Npm   => &NPM,        false, Ecosystem::Npm;
     "uv",    Uv    => UvSource,    true,  Ecosystem::Python;
     "pip",   Pip   => PipSource,   true,  Ecosystem::Python;

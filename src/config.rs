@@ -30,7 +30,7 @@ mod tests {
     #[test]
     fn test_default_has_all_sources() {
         let config = Config::default();
-        assert_eq!(config.precedence.len(), 10);
+        assert_eq!(config.precedence.len(), 11);
     }
 
     #[test]
