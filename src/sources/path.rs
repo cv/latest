@@ -24,7 +24,7 @@ impl Source for PathSource {
         }
 
         // Try common version flags
-        for flag in ["--version", "-version", "version", "-V", "-v"] {
+        for flag in ["--version", "-version", "version", "-V"] {
             if let Ok(output) = Command::new(package).arg(flag).output() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let stderr = String::from_utf8_lossy(&output.stderr);
@@ -34,7 +34,9 @@ impl Source for PathSource {
                 }
             }
         }
-        None
+        
+        // Command exists but version unknown (e.g., BSD utilities on macOS)
+        Some("installed".to_string())
     }
 }
 
