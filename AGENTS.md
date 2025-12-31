@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`latest` is a Rust CLI tool that finds the latest version of commands, packages, and libraries across multiple package managers. See [README.md](README.md) for usage and [SPEC.md](SPEC.md) for technical details.
+`latest` is a Rust CLI tool that finds the latest version of commands, packages, and libraries across multiple package managers. See [README.md](README.md) for usage. Technical details are in bd issues (`bd show <id>`).
 
 ## Development
 
@@ -81,4 +81,4 @@ src/
 3. Add to default precedence in `src/config.rs`
 4. Add tests
 
-See SPEC.md "Extension Guide" for detailed instructions.
+See `bd show latest-rl5` for Source trait details.
