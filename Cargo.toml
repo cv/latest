@@ -1,0 +1,18 @@
+[package]
+name = "latest"
+version = "0.1.0"
+edition = "2024"
+description = "Find the latest version of any command, package, or library"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+dirs = "6"
+serde_json = "1.0.148"
+
+[profile.release]
+lto = true
+strip = true
