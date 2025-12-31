@@ -6,7 +6,7 @@ mod sources;
 use clap::Parser;
 use config::Config;
 use rayon::prelude::*;
-use sources::{Source, SourceType};
+use sources::{source_by_name, Source};
 
 #[derive(Parser)]
 #[command(name = "latest")]
@@ -345,8 +345,8 @@ fn main() {
 
     let source_name = cli.source.as_deref().or(source_override);
     let sources: Vec<Box<dyn Source>> = match source_name {
-        Some(name) => match SourceType::from_name(name) {
-            Some(st) => vec![st.create()],
+        Some(name) => match source_by_name(name) {
+            Some(s) => vec![s],
             None => { eprintln!("Unknown source: {}", name); std::process::exit(1); }
         },
         None => config.precedence.iter().map(|st| st.create()).collect(),

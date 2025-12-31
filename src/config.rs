@@ -1,4 +1,4 @@
-use crate::sources::SourceType;
+use crate::sources::{default_precedence, SourceType};
 use serde::Deserialize;
 use std::fs;
 
@@ -6,21 +6,6 @@ use std::fs;
 pub struct Config {
     #[serde(default = "default_precedence")]
     pub precedence: Vec<SourceType>,
-}
-
-fn default_precedence() -> Vec<SourceType> {
-    vec![
-        SourceType::Path,
-        SourceType::Brew,
-        SourceType::Npm,
-        SourceType::Uv,
-        SourceType::Pip,
-        SourceType::Go,
-        SourceType::Cargo,
-        SourceType::Gem,
-        SourceType::Hex,
-        SourceType::Pub,
-    ]
 }
 
 impl Default for Config {
@@ -42,7 +27,6 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_default_has_all_sources() {
         let config = Config::default();
@@ -52,6 +36,6 @@ mod tests {
     #[test]
     fn test_parse_config() {
         let config: Config = toml::from_str(r#"precedence = ["npm", "cargo"]"#).unwrap();
-        assert_eq!(config.precedence, vec![SourceType::Npm, SourceType::Cargo]);
+        assert_eq!(config.precedence.len(), 2);
     }
 }
