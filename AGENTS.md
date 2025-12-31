@@ -1,40 +1,84 @@
 # Agent Instructions
 
-This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
+## Project Overview
 
-## Quick Reference
+`latest` is a Rust CLI tool that finds the latest version of commands, packages, and libraries across multiple package managers. See [README.md](README.md) for usage and [SPEC.md](SPEC.md) for technical details.
+
+## Development
+
+```bash
+cargo build           # Build
+cargo test            # Run all tests (unit + integration)
+cargo run -- <args>   # Run directly
+```
+
+**Before committing**: Always run `cargo test` and `cargo build` to ensure nothing is broken.
+
+## Issue Tracking (bd)
+
+This project uses **bd** for issue tracking.
 
 ```bash
 bd ready              # Find available work
 bd show <id>          # View issue details
+bd create             # Create a new issue
 bd update <id> --status in_progress  # Claim work
 bd close <id>         # Complete work
-bd sync               # Sync with git
+bd list               # List all open issues
 ```
+
+## Git Workflow
+
+- Work on `main` branch
+- Make small, focused commits with clear messages
+- Run tests before committing
 
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+When ending a session, complete ALL steps:
 
-**MANDATORY WORKFLOW:**
-
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
+1. **Create issues** for any remaining/follow-up work
+2. **Run quality gates** (if code changed):
    ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
+   cargo test
+   cargo build
    ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+3. **Update issues** - Close completed work, update in-progress items
+4. **Commit and push**:
+   ```bash
+   git add -A
+   git commit -m "descriptive message"
+   git pull --rebase  # if remote exists
+   bd sync
+   git push           # if remote exists
+   ```
+5. **Verify** - `git status` shows clean working tree
 
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+**Critical**: Work is NOT complete until everything is committed. If a remote exists, push is mandatory.
 
+## Code Structure
+
+```
+src/
+├── main.rs          # CLI, lookup engine, output formatting
+├── config.rs        # Configuration (~/.config/latest/config.toml)
+├── project.rs       # Project file scanning
+└── sources/
+    ├── mod.rs       # Source trait, Ecosystem enum
+    ├── path.rs      # $PATH binary lookup
+    ├── brew.rs      # Homebrew
+    ├── npm.rs       # npm registry
+    ├── pip.rs       # PyPI
+    ├── cargo.rs     # crates.io
+    ├── go.rs        # Go modules
+    └── uv.rs        # uv project-local Python packages
+```
+
+## Adding New Sources
+
+1. Create `src/sources/newname.rs` implementing the `Source` trait
+2. Register in `src/sources/mod.rs` (add to `SourceType` enum and `from_name`)
+3. Add to default precedence in `src/config.rs`
+4. Add tests
+
+See SPEC.md "Extension Guide" for detailed instructions.
