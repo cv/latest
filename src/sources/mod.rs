@@ -1,9 +1,6 @@
 mod path;
 mod brew;
-mod npm;
 mod pip;
-mod go;
-mod cargo;
 mod uv;
 
 use serde::Deserialize;
@@ -50,7 +47,8 @@ impl JsonApiSource {
         let url = self.url_template.replace("{}", package);
         let output = Command::new("curl").args(["-sf", &url]).output().ok()?;
         if !output.status.success() { return None; }
-        extract_json_path(&String::from_utf8_lossy(&output.stdout), self.version_path)
+        let version = extract_json_path(&String::from_utf8_lossy(&output.stdout), self.version_path)?;
+        Some(version.strip_prefix('v').unwrap_or(&version).to_string())
     }
 }
 
@@ -76,12 +74,22 @@ fn extract_json_path(json: &str, path: &str) -> Option<String> {
 
 pub use path::PathSource;
 pub use brew::BrewSource;
-pub use npm::NpmSource;
 pub use pip::PipSource;
-pub use go::GoSource;
-pub use cargo::CargoSource;
 pub use uv::UvSource;
 
+// JSON API sources - no CLI needed, just HTTP
+static NPM: JsonApiSource = JsonApiSource {
+    name: "npm", ecosystem: Ecosystem::Npm,
+    url_template: "https://registry.npmjs.org/{}/latest", version_path: "version",
+};
+static CARGO: JsonApiSource = JsonApiSource {
+    name: "cargo", ecosystem: Ecosystem::Cargo,
+    url_template: "https://crates.io/api/v1/crates/{}", version_path: "crate.max_stable_version",
+};
+static GO: JsonApiSource = JsonApiSource {
+    name: "go", ecosystem: Ecosystem::Go,
+    url_template: "https://proxy.golang.org/{}/@latest", version_path: "Version",
+};
 static GEM: JsonApiSource = JsonApiSource {
     name: "gem", ecosystem: Ecosystem::Ruby,
     url_template: "https://rubygems.org/api/v1/gems/{}.json", version_path: "version",
@@ -133,11 +141,11 @@ macro_rules! define_sources {
 define_sources! {
     "path",  Path  => PathSource,  true,  Ecosystem::System;
     "brew",  Brew  => BrewSource,  false, Ecosystem::System;
-    "npm",   Npm   => NpmSource,   false, Ecosystem::Npm;
+    "npm",   Npm   => &NPM,        false, Ecosystem::Npm;
     "uv",    Uv    => UvSource,    true,  Ecosystem::Python;
     "pip",   Pip   => PipSource,   true,  Ecosystem::Python;
-    "go",    Go    => GoSource,    false, Ecosystem::Go;
-    "cargo", Cargo => CargoSource, false, Ecosystem::Cargo;
+    "go",    Go    => &GO,         false, Ecosystem::Go;
+    "cargo", Cargo => &CARGO,      false, Ecosystem::Cargo;
     "gem",   Gem   => &GEM,        false, Ecosystem::Ruby;
     "hex",   Hex   => &HEX,        false, Ecosystem::Beam;
     "pub",   Pub   => &PUB,        false, Ecosystem::Dart;
