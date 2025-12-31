@@ -17,6 +17,9 @@ fn default_precedence() -> Vec<SourceType> {
         SourceType::Pip,
         SourceType::Go,
         SourceType::Cargo,
+        SourceType::Gem,
+        SourceType::Hex,
+        SourceType::Pub,
     ]
 }
 
@@ -43,7 +46,7 @@ mod tests {
     #[test]
     fn test_default_has_all_sources() {
         let config = Config::default();
-        assert_eq!(config.precedence.len(), 7);
+        assert_eq!(config.precedence.len(), 10);
     }
 
     #[test]

@@ -5,6 +5,9 @@ mod pip;
 mod go;
 mod cargo;
 mod uv;
+mod gem;
+mod hex;
+mod pub_dev;
 
 pub use path::PathSource;
 pub use brew::BrewSource;
@@ -13,6 +16,9 @@ pub use pip::PipSource;
 pub use go::GoSource;
 pub use cargo::CargoSource;
 pub use uv::UvSource;
+pub use gem::GemSource;
+pub use hex::HexSource;
+pub use pub_dev::PubSource;
 
 use serde::Deserialize;
 use std::sync::LazyLock;
@@ -29,6 +35,9 @@ pub enum Ecosystem {
     Npm,     // npm - Node packages
     Cargo,   // cargo - Rust crates
     Go,      // go - Go modules
+    Ruby,    // gem - Ruby gems
+    Beam,    // hex - Elixir/Erlang packages
+    Dart,    // pub - Dart/Flutter packages
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -41,6 +50,9 @@ pub enum SourceType {
     Go,
     Cargo,
     Uv,
+    Gem,
+    Hex,
+    Pub,
 }
 
 impl SourceType {
@@ -54,6 +66,9 @@ impl SourceType {
             SourceType::Go => Box::new(GoSource),
             SourceType::Cargo => Box::new(CargoSource),
             SourceType::Uv => Box::new(UvSource),
+            SourceType::Gem => Box::new(GemSource),
+            SourceType::Hex => Box::new(HexSource),
+            SourceType::Pub => Box::new(PubSource),
         }
     }
 
@@ -67,6 +82,9 @@ impl SourceType {
             "go" => Some(SourceType::Go),
             "cargo" => Some(SourceType::Cargo),
             "uv" => Some(SourceType::Uv),
+            "gem" => Some(SourceType::Gem),
+            "hex" => Some(SourceType::Hex),
+            "pub" => Some(SourceType::Pub),
             _ => None,
         }
     }
@@ -141,6 +159,9 @@ mod tests {
             (Box::new(CargoSource), "cargo", false, Ecosystem::Cargo),
             (Box::new(GoSource), "go", false, Ecosystem::Go),
             (Box::new(UvSource), "uv", true, Ecosystem::Python),
+            (Box::new(GemSource), "gem", false, Ecosystem::Ruby),
+            (Box::new(HexSource), "hex", false, Ecosystem::Beam),
+            (Box::new(PubSource), "pub", false, Ecosystem::Dart),
         ];
         for (source, name, local, ecosystem) in cases {
             assert_eq!(source.name(), name, "name mismatch for {}", name);
