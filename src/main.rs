@@ -1,3 +1,4 @@
+mod cache;
 mod config;
 mod project;
 mod sources;
@@ -29,6 +30,10 @@ struct Cli {
     /// Only show version number
     #[arg(short, long)]
     quiet: bool,
+
+    /// Bypass cache (always fetch fresh data)
+    #[arg(long)]
+    no_cache: bool,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,11 +94,11 @@ fn is_newer(installed: &str, latest: &str) -> bool {
     false
 }
 
-fn lookup(package: &str, sources: &[Box<dyn Source>], mode: LookupMode) -> PackageResult {
+fn lookup(package: &str, sources: &[Box<dyn Source>], mode: LookupMode, use_cache: bool) -> PackageResult {
     match mode {
-        LookupMode::All => lookup_all(package, sources),
-        LookupMode::Explicit => lookup_explicit(package, sources),
-        LookupMode::Default => lookup_default(package, sources),
+        LookupMode::All => lookup_all(package, sources, use_cache),
+        LookupMode::Explicit => lookup_explicit(package, sources, use_cache),
+        LookupMode::Default => lookup_default(package, sources, use_cache),
     }
 }
 
@@ -104,11 +109,33 @@ enum LookupMode {
     Default,  // normal behavior
 }
 
-fn lookup_all(package: &str, sources: &[Box<dyn Source>]) -> PackageResult {
+/// Query a source with optional caching (only for non-local sources)
+fn query_source(source: &Box<dyn Source>, package: &str, use_cache: bool) -> Option<String> {
+    // Local sources are never cached (they check installed versions)
+    if source.is_local() {
+        return source.get_version(package);
+    }
+
+    // Try cache first
+    if use_cache {
+        if let Some(cached) = cache::get(source.name(), package) {
+            return Some(cached);
+        }
+    }
+
+    // Query source and cache result
+    let version = source.get_version(package)?;
+    if use_cache {
+        cache::set(source.name(), package, &version);
+    }
+    Some(version)
+}
+
+fn lookup_all(package: &str, sources: &[Box<dyn Source>], use_cache: bool) -> PackageResult {
     let available: Vec<_> = sources
         .par_iter()
         .filter_map(|s| {
-            s.get_version(package).map(|v| VersionInfo {
+            query_source(s, package, use_cache).map(|v| VersionInfo {
                 version: v,
                 source: s.name().to_string(),
                 local: s.is_local(),
@@ -126,9 +153,9 @@ fn lookup_all(package: &str, sources: &[Box<dyn Source>]) -> PackageResult {
     }
 }
 
-fn lookup_explicit(package: &str, sources: &[Box<dyn Source>]) -> PackageResult {
+fn lookup_explicit(package: &str, sources: &[Box<dyn Source>], use_cache: bool) -> PackageResult {
     for source in sources {
-        if let Some(version) = source.get_version(package) {
+        if let Some(version) = query_source(source, package, use_cache) {
             let info = VersionInfo {
                 version,
                 source: source.name().to_string(),
@@ -155,19 +182,19 @@ fn lookup_explicit(package: &str, sources: &[Box<dyn Source>]) -> PackageResult 
     }
 }
 
-fn lookup_default(package: &str, sources: &[Box<dyn Source>]) -> PackageResult {
-    // Find installed version from local sources (parallel)
+fn lookup_default(package: &str, sources: &[Box<dyn Source>], use_cache: bool) -> PackageResult {
+    // Find installed version from local sources (parallel, never cached)
     let installed = sources.par_iter()
         .filter(|s| s.is_local())
         .find_map_any(|s| {
             s.get_version(package).map(|v| (v, s.name(), s.ecosystem()))
         });
 
-    // Find versions from registries (parallel)
+    // Find versions from registries (parallel, cached)
     let registry_versions: Vec<_> = sources.par_iter()
         .filter(|s| !s.is_local())
         .filter_map(|s| {
-            s.get_version(package).map(|v| VersionInfo {
+            query_source(s, package, use_cache).map(|v| VersionInfo {
                 version: v,
                 source: s.name().to_string(),
                 local: false,
@@ -331,8 +358,9 @@ fn main() {
     };
 
     // Lookup all packages (in parallel)
+    let use_cache = !cli.no_cache;
     let results: Vec<_> = packages.par_iter()
-        .map(|pkg| lookup(pkg, &sources, mode))
+        .map(|pkg| lookup(pkg, &sources, mode, use_cache))
         .collect();
 
     // Output
@@ -434,7 +462,7 @@ mod tests {
             Box::new(MockSource { name: "path", packages: vec![("node", "25.0.0")], local: true, ecosystem: Ecosystem::System }),
             Box::new(MockSource { name: "brew", packages: vec![("node", "25.0.0")], local: false, ecosystem: Ecosystem::System }),
         ];
-        let r = lookup("node", &sources, LookupMode::Default);
+        let r = lookup("node", &sources, LookupMode::Default, false);
         assert_eq!(r.status, Status::UpToDate);
     }
 
@@ -444,7 +472,7 @@ mod tests {
             Box::new(MockSource { name: "path", packages: vec![("node", "24.0.0")], local: true, ecosystem: Ecosystem::System }),
             Box::new(MockSource { name: "brew", packages: vec![("node", "25.0.0")], local: false, ecosystem: Ecosystem::System }),
         ];
-        let r = lookup("node", &sources, LookupMode::Default);
+        let r = lookup("node", &sources, LookupMode::Default, false);
         assert_eq!(r.status, Status::Outdated);
     }
 
@@ -454,7 +482,7 @@ mod tests {
             Box::new(MockSource { name: "path", packages: vec![("mcs", "0.7.0")], local: true, ecosystem: Ecosystem::System }),
             Box::new(MockSource { name: "npm", packages: vec![("mcs", "2.0.0")], local: false, ecosystem: Ecosystem::Npm }),
         ];
-        let r = lookup("mcs", &sources, LookupMode::Default);
+        let r = lookup("mcs", &sources, LookupMode::Default, false);
         assert_eq!(r.status, Status::UpToDate); // Different ecosystem, not compared
     }
 
@@ -464,7 +492,7 @@ mod tests {
             Box::new(MockSource { name: "path", packages: vec![], local: true, ecosystem: Ecosystem::System }),
             Box::new(MockSource { name: "npm", packages: vec![("express", "5.0.0")], local: false, ecosystem: Ecosystem::Npm }),
         ];
-        let r = lookup("express", &sources, LookupMode::Default);
+        let r = lookup("express", &sources, LookupMode::Default, false);
         assert_eq!(r.status, Status::NotInstalled);
         assert_eq!(r.available.len(), 1);
     }
@@ -474,7 +502,7 @@ mod tests {
         let sources: Vec<Box<dyn Source>> = vec![
             Box::new(MockSource { name: "path", packages: vec![], local: true, ecosystem: Ecosystem::System }),
         ];
-        let r = lookup("nonexistent", &sources, LookupMode::Default);
+        let r = lookup("nonexistent", &sources, LookupMode::Default, false);
         assert_eq!(r.status, Status::NotFound);
     }
 
@@ -484,7 +512,7 @@ mod tests {
             Box::new(MockSource { name: "path", packages: vec![("node", "25.0.0")], local: true, ecosystem: Ecosystem::System }),
             Box::new(MockSource { name: "npm", packages: vec![("node", "24.0.0")], local: false, ecosystem: Ecosystem::Npm }),
         ];
-        let r = lookup("node", &sources, LookupMode::All);
+        let r = lookup("node", &sources, LookupMode::All, false);
         assert_eq!(r.available.len(), 2);
     }
 }
