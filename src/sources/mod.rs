@@ -72,7 +72,7 @@ impl SourceType {
     }
 }
 
-pub trait Source {
+pub trait Source: Send + Sync {
     fn name(&self) -> &'static str;
     fn get_version(&self, package: &str) -> Option<String>;
     

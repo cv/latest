@@ -4,6 +4,7 @@ mod sources;
 
 use clap::Parser;
 use config::Config;
+use rayon::prelude::*;
 use sources::{Source, SourceType};
 
 #[derive(Parser)]
@@ -105,7 +106,7 @@ enum LookupMode {
 
 fn lookup_all(package: &str, sources: &[Box<dyn Source>]) -> PackageResult {
     let available: Vec<_> = sources
-        .iter()
+        .par_iter()
         .filter_map(|s| {
             s.get_version(package).map(|v| VersionInfo {
                 version: v,
@@ -155,15 +156,15 @@ fn lookup_explicit(package: &str, sources: &[Box<dyn Source>]) -> PackageResult 
 }
 
 fn lookup_default(package: &str, sources: &[Box<dyn Source>]) -> PackageResult {
-    // Find installed version from local sources
-    let installed = sources.iter()
+    // Find installed version from local sources (parallel)
+    let installed = sources.par_iter()
         .filter(|s| s.is_local())
-        .find_map(|s| {
+        .find_map_any(|s| {
             s.get_version(package).map(|v| (v, s.name(), s.ecosystem()))
         });
 
-    // Find versions from registries
-    let registry_versions: Vec<_> = sources.iter()
+    // Find versions from registries (parallel)
+    let registry_versions: Vec<_> = sources.par_iter()
         .filter(|s| !s.is_local())
         .filter_map(|s| {
             s.get_version(package).map(|v| VersionInfo {
@@ -329,8 +330,8 @@ fn main() {
         LookupMode::Default
     };
 
-    // Lookup all packages
-    let results: Vec<_> = packages.iter()
+    // Lookup all packages (in parallel)
+    let results: Vec<_> = packages.par_iter()
         .map(|pkg| lookup(pkg, &sources, mode))
         .collect();
 
