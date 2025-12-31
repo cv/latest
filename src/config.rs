@@ -10,7 +10,7 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Config { precedence: default_precedence() }
+        Self { precedence: default_precedence() }
     }
 }
 

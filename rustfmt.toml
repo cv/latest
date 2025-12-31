@@ -1,0 +1,10 @@
+max_width = 100
+use_small_heuristics = "Max"
+reorder_imports = true
+
+# Nightly-only options (uncomment when using nightly toolchain):
+# imports_granularity = "Crate"
+# group_imports = "StdExternalCrate"
+# format_code_in_doc_comments = true
+# format_strings = true
+# wrap_comments = true

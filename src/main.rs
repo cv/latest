@@ -11,6 +11,7 @@ use sources::{source_by_name, Source};
 #[derive(Parser)]
 #[command(name = "latest")]
 #[command(about = "Find the latest version of any command, package, or library")]
+#[allow(clippy::struct_excessive_bools)]
 struct Cli {
     /// Packages to look up (if empty, scans project files)
     packages: Vec<String>,
@@ -59,11 +60,7 @@ struct VersionInfo {
 
 impl VersionInfo {
     fn new(version: String, source: &dyn Source) -> Self {
-        Self {
-            version,
-            source: source.name().to_string(),
-            local: source.is_local(),
-        }
+        Self { version, source: source.name().to_string(), local: source.is_local() }
     }
 }
 
@@ -145,9 +142,7 @@ impl PackageResult {
 
 fn is_newer(installed: &str, latest: &str) -> bool {
     let parse = |v: &str| -> Vec<u64> {
-        v.split(|c: char| !c.is_ascii_digit())
-            .filter_map(|s| s.parse().ok())
-            .collect()
+        v.split(|c: char| !c.is_ascii_digit()).filter_map(|s| s.parse().ok()).collect()
     };
     let (a, b) = (parse(installed), parse(latest));
     (0..a.len().max(b.len())).any(|i| {
@@ -157,6 +152,7 @@ fn is_newer(installed: &str, latest: &str) -> bool {
 }
 
 /// Query a source with optional caching (only for non-local sources)
+#[allow(clippy::collapsible_if)] // Let chains require nightly rustfmt
 fn query_source(source: &dyn Source, package: &str, use_cache: bool) -> Option<String> {
     if source.is_local() {
         return source.get_version(package);
@@ -180,32 +176,47 @@ enum LookupMode {
     Default,
 }
 
-fn lookup(package: &str, sources: &[Box<dyn Source>], mode: LookupMode, use_cache: bool) -> PackageResult {
+fn lookup(
+    package: &str,
+    sources: &[Box<dyn Source>],
+    mode: LookupMode,
+    use_cache: bool,
+) -> PackageResult {
     match mode {
         LookupMode::All => {
-            let available: Vec<_> = sources.par_iter()
-                .filter_map(|s| query_source(s.as_ref(), package, use_cache).map(|v| VersionInfo::new(v, s.as_ref())))
+            let available: Vec<_> = sources
+                .par_iter()
+                .filter_map(|s| {
+                    query_source(s.as_ref(), package, use_cache)
+                        .map(|v| VersionInfo::new(v, s.as_ref()))
+                })
                 .collect();
             PackageResult::all_sources(package, available)
         }
-        LookupMode::Explicit => {
-            sources.par_iter()
-                .find_map_any(|s| query_source(s.as_ref(), package, use_cache).map(|v| VersionInfo::new(v, s.as_ref())))
-                .map(|info| PackageResult::up_to_date(package, info))
-                .unwrap_or_else(|| PackageResult::not_found(package))
-        }
+        LookupMode::Explicit => sources
+            .par_iter()
+            .find_map_any(|s| {
+                query_source(s.as_ref(), package, use_cache)
+                    .map(|v| VersionInfo::new(v, s.as_ref()))
+            })
+            .map_or_else(
+                || PackageResult::not_found(package),
+                |info| PackageResult::up_to_date(package, info),
+            ),
         LookupMode::Default => lookup_default(package, sources, use_cache),
     }
 }
 
 fn lookup_default(package: &str, sources: &[Box<dyn Source>], use_cache: bool) -> PackageResult {
     // Find installed version from local sources
-    let installed = sources.par_iter()
+    let installed = sources
+        .par_iter()
         .filter(|s| s.is_local())
         .find_map_any(|s| s.get_version(package).map(|v| (v, s.as_ref())));
 
     // Find versions from registries
-    let registry_versions: Vec<_> = sources.par_iter()
+    let registry_versions: Vec<_> = sources
+        .par_iter()
         .filter(|s| !s.is_local())
         .filter_map(|s| query_source(s.as_ref(), package, use_cache).map(|v| (v, s.as_ref())))
         .collect();
@@ -213,21 +224,31 @@ fn lookup_default(package: &str, sources: &[Box<dyn Source>], use_cache: bool) -
     match installed {
         Some((inst_version, inst_source)) => {
             let inst_ecosystem = inst_source.ecosystem();
-            let newer = registry_versions.iter()
+            let newer = registry_versions
+                .iter()
                 .filter(|(_, s)| s.ecosystem() == inst_ecosystem)
                 .filter(|(v, _)| is_newer(&inst_version, v))
-                .max_by(|(a, _), (b, _)| if is_newer(a, b) { std::cmp::Ordering::Less } else { std::cmp::Ordering::Greater });
+                .max_by(|(a, _), (b, _)| {
+                    if is_newer(a, b) {
+                        std::cmp::Ordering::Less
+                    } else {
+                        std::cmp::Ordering::Greater
+                    }
+                });
 
             let installed_info = VersionInfo::new(inst_version, inst_source);
             match newer {
-                Some((v, s)) => PackageResult::outdated(package, installed_info, VersionInfo::new(v.clone(), *s)),
+                Some((v, s)) => PackageResult::outdated(
+                    package,
+                    installed_info,
+                    VersionInfo::new(v.clone(), *s),
+                ),
                 None => PackageResult::up_to_date(package, installed_info),
             }
         }
         None if !registry_versions.is_empty() => {
-            let available: Vec<_> = registry_versions.into_iter()
-                .map(|(v, s)| VersionInfo::new(v, s))
-                .collect();
+            let available: Vec<_> =
+                registry_versions.into_iter().map(|(v, s)| VersionInfo::new(v, s)).collect();
             PackageResult::not_installed(package, available)
         }
         None => PackageResult::not_found(package),
@@ -247,44 +268,67 @@ fn get_install_commands(package: &str, available: &[VersionInfo]) -> Vec<String>
         Path::new("go.mod").exists(),
     );
 
-    available.iter().filter_map(|v| {
-        Some(match v.source.as_str() {
-            "brew" => format!("brew install {}", package),
-            "npm" => format!("npm install {}{}", if context.1 { "" } else { "-g " }, package),
-            "pip" => format!("{} {}", if context.0 { "uv add" } else { "pip install" }, package),
-            "cargo" => format!("cargo {} {}", if context.2 { "add" } else { "install" }, package),
-            "go" => format!("go {} {}", if context.3 { "get" } else { "install" }, package),
-            _ => return None,
+    available
+        .iter()
+        .filter_map(|v| {
+            Some(match v.source.as_str() {
+                "brew" => format!("brew install {package}"),
+                "npm" => format!("npm install {}{}", if context.1 { "" } else { "-g " }, package),
+                "pip" => {
+                    format!("{} {}", if context.0 { "uv add" } else { "pip install" }, package)
+                }
+                "cargo" => {
+                    format!("cargo {} {}", if context.2 { "add" } else { "install" }, package)
+                }
+                "go" => format!("go {} {}", if context.3 { "get" } else { "install" }, package),
+                _ => return None,
+            })
         })
-    }).collect()
+        .collect()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Output formatting
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Format a package result for display.
+/// Uses unwrap on installed/latest because status guarantees their presence.
+#[allow(clippy::unwrap_used)]
 fn format_result(r: &PackageResult, show_name: bool) -> String {
     let prefix = if show_name { format!("{}: ", r.package) } else { String::new() };
     match r.status {
-        Status::UpToDate => format!("{}{}  ✓", prefix, r.installed.as_ref().unwrap().version),
-        Status::Outdated => format!("{}{} → {} available", prefix, 
-            r.installed.as_ref().unwrap().version, r.latest.as_ref().unwrap().version),
-        Status::NotInstalled => {
-            let avail = r.available.iter().map(|a| format!("{} in {}", a.version, a.source)).collect::<Vec<_>>().join(", ");
-            format!("{}not installed (available: {})", prefix, avail)
+        Status::UpToDate => {
+            let version = &r.installed.as_ref().unwrap().version;
+            format!("{prefix}{version}  ✓")
         }
-        Status::NotFound => format!("{}not found", prefix),
+        Status::Outdated => {
+            let installed = &r.installed.as_ref().unwrap().version;
+            let latest = &r.latest.as_ref().unwrap().version;
+            format!("{prefix}{installed} → {latest} available")
+        }
+        Status::NotInstalled => {
+            let avail = r
+                .available
+                .iter()
+                .map(|a| format!("{} in {}", a.version, a.source))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("{prefix}not installed (available: {avail})")
+        }
+        Status::NotFound => format!("{prefix}not found"),
     }
 }
 
+#[allow(clippy::unwrap_used)]
 fn output_results(cli: &Cli, results: &[PackageResult]) {
     if cli.json {
+        // JSON serialization of simple structs won't fail
         let out = if results.len() == 1 {
             serde_json::to_string_pretty(&results[0]).unwrap()
         } else {
             serde_json::to_string_pretty(results).unwrap()
         };
-        println!("{}", out);
+        println!("{out}");
     } else if cli.quiet {
         for r in results {
             match r.installed.as_ref().or(r.latest.as_ref()) {
@@ -295,14 +339,16 @@ fn output_results(cli: &Cli, results: &[PackageResult]) {
         }
     } else if cli.all {
         for r in results {
-            if results.len() > 1 { println!("{}:", r.package); }
+            if results.len() > 1 {
+                println!("{}:", r.package);
+            }
             if r.available.is_empty() {
                 eprintln!("{}", if results.len() > 1 { "  not found" } else { "not found" });
             } else {
                 for v in &r.available {
                     let mark = if v.local { " (installed)" } else { "" };
                     let line = format!("{}: {}{}", v.source, v.version, mark);
-                    println!("{}", if results.len() > 1 { format!("  {}", line) } else { line });
+                    println!("{}", if results.len() > 1 { format!("  {line}") } else { line });
                 }
             }
         }
@@ -311,10 +357,12 @@ fn output_results(cli: &Cli, results: &[PackageResult]) {
         for r in results {
             let line = format_result(r, multi);
             if matches!(r.status, Status::NotFound | Status::NotInstalled) {
-                eprintln!("{}", line);
-                for cmd in &r.install_commands { eprintln!("  {}", cmd); }
+                eprintln!("{line}");
+                for cmd in &r.install_commands {
+                    eprintln!("  {cmd}");
+                }
             } else {
-                println!("{}", line);
+                println!("{line}");
             }
         }
     }
@@ -329,15 +377,14 @@ fn main() {
     let config = Config::load();
 
     let (packages, source_override) = if cli.packages.is_empty() {
-        match project::scan() {
-            Some(p) => {
-                if !cli.json && !cli.quiet { eprintln!("Scanning {}...", p.file); }
-                (p.packages, Some(p.source))
+        if let Some(p) = project::scan() {
+            if !cli.json && !cli.quiet {
+                eprintln!("Scanning {}...", p.file);
             }
-            None => {
-                eprintln!("No project file found. Usage: latest <package> [...]");
-                std::process::exit(1);
-            }
+            (p.packages, Some(p.source))
+        } else {
+            eprintln!("No project file found. Usage: latest <package> [...]");
+            std::process::exit(1);
         }
     } else {
         (cli.packages.clone(), None)
@@ -345,11 +392,14 @@ fn main() {
 
     let source_name = cli.source.as_deref().or(source_override);
     let sources: Vec<Box<dyn Source>> = match source_name {
-        Some(name) => match source_by_name(name) {
-            Some(s) => vec![s],
-            None => { eprintln!("Unknown source: {}", name); std::process::exit(1); }
-        },
-        None => config.precedence.iter().map(|st| st.create()).collect(),
+        Some(name) => source_by_name(name).map_or_else(
+            || {
+                eprintln!("Unknown source: {name}");
+                std::process::exit(1);
+            },
+            |s| vec![s],
+        ),
+        None => config.precedence.iter().map(sources::SourceType::create).collect(),
     };
 
     let mode = match (cli.all, source_name.is_some()) {
@@ -359,15 +409,19 @@ fn main() {
     };
 
     let use_cache = !cli.no_cache;
-    let results: Vec<_> = packages.par_iter()
-        .map(|pkg| lookup(pkg, &sources, mode, use_cache))
-        .collect();
+    let results: Vec<_> =
+        packages.par_iter().map(|pkg| lookup(pkg, &sources, mode, use_cache)).collect();
 
     output_results(&cli, &results);
 
-    let code = if results.iter().any(|r| matches!(r.status, Status::NotFound | Status::NotInstalled)) { 1 }
-        else if results.iter().any(|r| r.status == Status::Outdated) { 2 }
-        else { 0 };
+    let code =
+        if results.iter().any(|r| matches!(r.status, Status::NotFound | Status::NotInstalled)) {
+            1
+        } else if results.iter().any(|r| r.status == Status::Outdated) {
+            2
+        } else {
+            0
+        };
     std::process::exit(code);
 }
 
@@ -397,15 +451,26 @@ mod tests {
     }
 
     impl Source for MockSource {
-        fn name(&self) -> &'static str { self.name }
-        fn is_local(&self) -> bool { self.local }
-        fn ecosystem(&self) -> Ecosystem { self.ecosystem }
+        fn name(&self) -> &'static str {
+            self.name
+        }
+        fn is_local(&self) -> bool {
+            self.local
+        }
+        fn ecosystem(&self) -> Ecosystem {
+            self.ecosystem
+        }
         fn get_version(&self, pkg: &str) -> Option<String> {
             self.packages.iter().find(|(n, _)| *n == pkg).map(|(_, v)| v.to_string())
         }
     }
 
-    fn mock(name: &'static str, packages: Vec<(&'static str, &'static str)>, local: bool, ecosystem: Ecosystem) -> Box<dyn Source> {
+    fn mock(
+        name: &'static str,
+        packages: Vec<(&'static str, &'static str)>,
+        local: bool,
+        ecosystem: Ecosystem,
+    ) -> Box<dyn Source> {
         Box::new(MockSource { name, packages, local, ecosystem })
     }
 
@@ -450,7 +515,10 @@ mod tests {
     #[test]
     fn test_lookup_not_found() {
         let sources = vec![mock("path", vec![], true, Ecosystem::System)];
-        assert_eq!(lookup("nonexistent", &sources, LookupMode::Default, false).status, Status::NotFound);
+        assert_eq!(
+            lookup("nonexistent", &sources, LookupMode::Default, false).status,
+            Status::NotFound
+        );
     }
 
     #[test]

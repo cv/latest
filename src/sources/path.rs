@@ -4,9 +4,15 @@ use std::process::Command;
 pub struct PathSource;
 
 impl Source for PathSource {
-    fn name(&self) -> &'static str { "path" }
-    fn is_local(&self) -> bool { true }
-    fn ecosystem(&self) -> Ecosystem { Ecosystem::System }
+    fn name(&self) -> &'static str {
+        "path"
+    }
+    fn is_local(&self) -> bool {
+        true
+    }
+    fn ecosystem(&self) -> Ecosystem {
+        Ecosystem::System
+    }
 
     fn get_version(&self, package: &str) -> Option<String> {
         Command::new("which").arg(package).output().ok().filter(|o| o.status.success())?;

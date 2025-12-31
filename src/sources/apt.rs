@@ -4,16 +4,22 @@ use std::process::Command;
 pub struct AptSource;
 
 impl Source for AptSource {
-    fn name(&self) -> &'static str { "apt" }
-    fn ecosystem(&self) -> Ecosystem { Ecosystem::System }
+    fn name(&self) -> &'static str {
+        "apt"
+    }
+    fn ecosystem(&self) -> Ecosystem {
+        Ecosystem::System
+    }
 
     fn get_version(&self, package: &str) -> Option<String> {
         // Check if apt-cache is available
         Command::new("which").arg("apt-cache").output().ok().filter(|o| o.status.success())?;
-        
+
         let output = Command::new("apt-cache").args(["show", package]).output().ok()?;
-        if !output.status.success() { return None; }
-        
+        if !output.status.success() {
+            return None;
+        }
+
         extract_version_field(&String::from_utf8_lossy(&output.stdout))
     }
 }

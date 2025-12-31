@@ -10,9 +10,11 @@
 cargo build           # Build
 cargo test            # Run all tests (unit + integration)
 cargo run -- <args>   # Run directly
+cargo fmt             # Format code
+cargo clippy          # Check lints
 ```
 
-**Before committing**: Always run `cargo test` and `cargo build` to ensure nothing is broken.
+**Before committing**: Always run `cargo test`, `cargo clippy`, and `cargo build` to ensure nothing is broken.
 
 ## Issue Tracking (bd)
 

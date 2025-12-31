@@ -17,11 +17,8 @@ fn test_help_flag() {
 
 #[test]
 fn test_nonexistent_package() {
-    let output = latest_cmd()
-        .arg("nonexistent-package-xyz-12345")
-        .output()
-        .expect("Failed to run");
-    
+    let output = latest_cmd().arg("nonexistent-package-xyz-12345").output().expect("Failed to run");
+
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("not found"));
@@ -33,7 +30,7 @@ fn test_nonexistent_package_json() {
         .args(["--json", "nonexistent-package-xyz-12345"])
         .output()
         .expect("Failed to run");
-    
+
     assert!(!output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).expect("Invalid JSON");
@@ -43,11 +40,9 @@ fn test_nonexistent_package_json() {
 
 #[test]
 fn test_unknown_source() {
-    let output = latest_cmd()
-        .args(["--source", "not_found", "foo"])
-        .output()
-        .expect("Failed to run");
-    
+    let output =
+        latest_cmd().args(["--source", "not_found", "foo"]).output().expect("Failed to run");
+
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("Unknown source: not_found"));
@@ -55,11 +50,9 @@ fn test_unknown_source() {
 
 #[test]
 fn test_multiple_packages() {
-    let output = latest_cmd()
-        .args(["--source", "cargo", "serde", "clap"])
-        .output()
-        .expect("Failed to run");
-    
+    let output =
+        latest_cmd().args(["--source", "cargo", "serde", "clap"]).output().expect("Failed to run");
+
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("serde:"));
@@ -72,7 +65,7 @@ fn test_multiple_packages_json() {
         .args(["--json", "--source", "cargo", "serde", "clap"])
         .output()
         .expect("Failed to run");
-    
+
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).expect("Invalid JSON");
@@ -89,7 +82,7 @@ fn test_single_package_json() {
         .args(["--json", "--source", "cargo", "serde"])
         .output()
         .expect("Failed to run");
-    
+
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).expect("Invalid JSON");
@@ -106,7 +99,7 @@ fn test_all_flag_json() {
         .args(["--json", "--all", "--source", "cargo", "serde"])
         .output()
         .expect("Failed to run");
-    
+
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&stdout).expect("Invalid JSON");
@@ -119,11 +112,8 @@ fn test_all_flag_json() {
 // Test real packages that should exist
 #[test]
 fn test_cargo_serde() {
-    let output = latest_cmd()
-        .args(["--source", "cargo", "serde"])
-        .output()
-        .expect("Failed to run");
-    
+    let output = latest_cmd().args(["--source", "cargo", "serde"]).output().expect("Failed to run");
+
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     // Should contain a version and checkmark
@@ -133,11 +123,8 @@ fn test_cargo_serde() {
 
 #[test]
 fn test_npm_express() {
-    let output = latest_cmd()
-        .args(["--source", "npm", "express"])
-        .output()
-        .expect("Failed to run");
-    
+    let output = latest_cmd().args(["--source", "npm", "express"]).output().expect("Failed to run");
+
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     assert!(stdout.contains('.'), "Expected version with dots: {}", stdout);
@@ -149,13 +136,13 @@ fn test_mixed_found_and_not_found() {
         .args(["--source", "cargo", "serde", "nonexistent-xyz-12345"])
         .output()
         .expect("Failed to run");
-    
+
     // Should fail because one package wasn't found
     assert!(!output.status.success());
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
-    
+
     // But should still output the found one
     assert!(stdout.contains("serde:"), "stdout: {}", stdout);
     assert!(stderr.contains("not found"), "stderr: {}", stderr);
@@ -167,7 +154,7 @@ fn test_quiet_mode() {
         .args(["--quiet", "--source", "cargo", "serde"])
         .output()
         .expect("Failed to run");
-    
+
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     // Quiet mode should just output version, no checkmark
