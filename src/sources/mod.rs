@@ -15,6 +15,11 @@ pub use cargo::CargoSource;
 pub use uv::UvSource;
 
 use serde::Deserialize;
+use std::sync::LazyLock;
+
+static VERSION_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
+    regex::Regex::new(r"v?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9.-]+)?)").unwrap()
+});
 
 /// Ecosystem grouping - sources in the same ecosystem can be version-compared
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -82,8 +87,8 @@ pub trait Source {
 
 /// Extract a semver-like version from text
 pub fn extract_version(text: &str) -> Option<String> {
-    let re = regex::Regex::new(r"v?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9.-]+)?)").ok()?;
-    re.captures(text)
+    VERSION_REGEX
+        .captures(text)
         .and_then(|caps| caps.get(1))
         .map(|m| m.as_str().to_string())
 }
