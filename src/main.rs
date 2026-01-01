@@ -5,6 +5,37 @@ use latest::project;
 use latest::sources::{self, Source, source_by_name};
 use rayon::prelude::*;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Security: Output sanitization
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Sanitize output to prevent escape sequence injection from malicious sources.
+/// Strips all control characters except newline, including ANSI escape sequences.
+fn sanitize_output(s: &str) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // Skip ANSI escape sequence: ESC [ ... final_byte
+            if chars.peek() == Some(&'[') {
+                chars.next(); // consume '['
+                // Skip until we hit a letter (final byte of CSI sequence)
+                while let Some(&next) = chars.peek() {
+                    chars.next();
+                    if next.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            }
+            // ESC without [ is also stripped (it's a control char)
+        } else if !c.is_control() || c == '\n' {
+            result.push(c);
+        }
+    }
+    result
+}
+
 #[derive(Parser)]
 #[command(name = "latest")]
 #[command(about = "Find the latest version of any command, package, or library")]
@@ -32,6 +63,10 @@ struct Cli {
     /// Bypass cache (always fetch fresh data)
     #[arg(long)]
     no_cache: bool,
+
+    /// Only use local sources (no network requests)
+    #[arg(long)]
+    offline: bool,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,8 +91,12 @@ struct VersionInfo {
 }
 
 impl VersionInfo {
-    fn new(version: String, source: &dyn Source) -> Self {
-        Self { version, source: source.name().to_string(), local: source.is_local() }
+    fn new(version: &str, source: &dyn Source) -> Self {
+        Self {
+            version: sanitize_output(version),
+            source: source.name().to_string(),
+            local: source.is_local(),
+        }
     }
 }
 
@@ -189,7 +228,7 @@ fn lookup(
                 .par_iter()
                 .filter_map(|s| {
                     query_source(s.as_ref(), package, use_cache)
-                        .map(|v| VersionInfo::new(v, s.as_ref()))
+                        .map(|v| VersionInfo::new(&v, s.as_ref()))
                 })
                 .collect();
             PackageResult::all_sources(package, available)
@@ -198,7 +237,7 @@ fn lookup(
             .par_iter()
             .find_map_any(|s| {
                 query_source(s.as_ref(), package, use_cache)
-                    .map(|v| VersionInfo::new(v, s.as_ref()))
+                    .map(|v| VersionInfo::new(&v, s.as_ref()))
             })
             .map_or_else(
                 || PackageResult::not_found(package),
@@ -244,12 +283,12 @@ fn lookup_default(package: &str, sources: &[Box<dyn Source>], use_cache: bool) -
                 .map(|(_, s)| s.name().to_string())
                 .collect();
 
-            let installed_info = VersionInfo::new(inst_version, inst_source);
+            let installed_info = VersionInfo::new(&inst_version, inst_source);
             match newer {
                 Some((v, s)) => PackageResult::outdated(
                     package,
                     installed_info,
-                    VersionInfo::new(v.clone(), *s),
+                    VersionInfo::new(v, *s),
                     also_found_in,
                 ),
                 None => PackageResult::up_to_date(package, installed_info, also_found_in),
@@ -257,7 +296,7 @@ fn lookup_default(package: &str, sources: &[Box<dyn Source>], use_cache: bool) -
         }
         None if !registry_versions.is_empty() => {
             let available: Vec<_> =
-                registry_versions.into_iter().map(|(v, s)| VersionInfo::new(v, s)).collect();
+                registry_versions.into_iter().map(|(v, s)| VersionInfo::new(&v, s)).collect();
             PackageResult::not_installed(package, available)
         }
         None => PackageResult::not_found(package),
@@ -433,6 +472,13 @@ fn main() {
                 None => config.precedence.iter().map(sources::SourceType::create).collect(),
             };
 
+            // Filter to local-only sources when offline mode is enabled
+            let sources_to_use: Vec<Box<dyn Source>> = if cli.offline {
+                sources_to_use.into_iter().filter(|s| s.is_local()).collect()
+            } else {
+                sources_to_use
+            };
+
             if sources_to_use.is_empty() {
                 // This happens if an unknown source was specified
                 return PackageResult::not_found(pkg);
@@ -603,5 +649,109 @@ mod tests {
         assert!(r.also_found_in.contains(&"cargo".to_string()));
         // brew is same ecosystem as path, so it should not be in also_found_in
         assert!(!r.also_found_in.contains(&"brew".to_string()));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Sanitization tests (TDD: tests written first)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_sanitize_normal_version_unchanged() {
+        assert_eq!(sanitize_output("1.0.0"), "1.0.0");
+        assert_eq!(sanitize_output("v2.3.4-beta.1"), "v2.3.4-beta.1");
+        assert_eq!(sanitize_output("25.0.0"), "25.0.0");
+    }
+
+    #[test]
+    fn test_sanitize_strips_ansi_escape_sequences() {
+        // ANSI color codes
+        assert_eq!(sanitize_output("\x1b[31m1.0.0\x1b[0m"), "1.0.0");
+        // ANSI clear screen
+        assert_eq!(sanitize_output("\x1b[2J1.0.0"), "1.0.0");
+        // ANSI cursor movement
+        assert_eq!(sanitize_output("\x1b[H1.0.0"), "1.0.0");
+    }
+
+    #[test]
+    fn test_sanitize_strips_control_characters() {
+        // Tab character
+        assert_eq!(sanitize_output("1.0\t.0"), "1.0.0");
+        // Null byte
+        assert_eq!(sanitize_output("1.0\x00.0"), "1.0.0");
+        // Form feed
+        assert_eq!(sanitize_output("1.0\x0C.0"), "1.0.0");
+    }
+
+    #[test]
+    fn test_sanitize_preserves_newline() {
+        assert_eq!(sanitize_output("1.0.0\n"), "1.0.0\n");
+        assert_eq!(sanitize_output("line1\nline2"), "line1\nline2");
+    }
+
+    #[test]
+    fn test_sanitize_strips_carriage_return() {
+        assert_eq!(sanitize_output("1.0.0\r"), "1.0.0");
+        assert_eq!(sanitize_output("fake\rreal"), "fakereal");
+    }
+
+    #[test]
+    fn test_sanitize_strips_bell_character() {
+        assert_eq!(sanitize_output("1.0.0\x07"), "1.0.0");
+        assert_eq!(sanitize_output("\x07\x07alert\x07"), "alert");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Offline mode tests (TDD: tests written first for issue latest-8y4)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_filter_sources_for_offline_mode() {
+        let sources: Vec<Box<dyn Source>> = vec![
+            mock("path", vec![("node", "25.0.0")], true, Ecosystem::System),
+            mock("brew", vec![("node", "25.0.0")], false, Ecosystem::System),
+            mock("npm", vec![("express", "5.0.0")], false, Ecosystem::Npm),
+            mock("uv", vec![("requests", "2.0.0")], true, Ecosystem::Python),
+        ];
+
+        let local_only: Vec<_> = sources.into_iter().filter(|s| s.is_local()).collect();
+
+        assert_eq!(local_only.len(), 2);
+        assert!(local_only.iter().any(|s| s.name() == "path"));
+        assert!(local_only.iter().any(|s| s.name() == "uv"));
+        assert!(!local_only.iter().any(|s| s.name() == "brew"));
+        assert!(!local_only.iter().any(|s| s.name() == "npm"));
+    }
+
+    #[test]
+    fn test_offline_lookup_finds_local_package() {
+        let sources: Vec<Box<dyn Source>> = vec![
+            mock("path", vec![("node", "25.0.0")], true, Ecosystem::System),
+        ];
+
+        let r = lookup("node", &sources, LookupMode::Default, false);
+        assert_eq!(r.status, Status::UpToDate);
+    }
+
+    #[test]
+    fn test_offline_lookup_not_found_when_only_network() {
+        // No local sources have the package
+        let sources: Vec<Box<dyn Source>> = vec![
+            mock("path", vec![], true, Ecosystem::System),
+        ];
+
+        let r = lookup("express", &sources, LookupMode::Default, false);
+        assert_eq!(r.status, Status::NotFound);
+    }
+
+    #[test]
+    fn test_offline_mode_all_flag_only_shows_local() {
+        let sources: Vec<Box<dyn Source>> = vec![
+            mock("path", vec![("node", "25.0.0")], true, Ecosystem::System),
+            mock("uv", vec![("node", "24.0.0")], true, Ecosystem::Python),
+        ];
+
+        let r = lookup("node", &sources, LookupMode::All, false);
+        assert_eq!(r.available.len(), 2);
+        assert!(r.available.iter().all(|v| v.local));
     }
 }

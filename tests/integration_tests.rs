@@ -210,3 +210,58 @@ fn test_json_includes_source() {
     // JSON should include source field
     assert_eq!(json["installed"]["source"], "npm");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Offline mode tests (TDD: tests written first for issue latest-8y4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn test_offline_flag_in_help() {
+    let output = latest_cmd().arg("--help").output().expect("Failed to run");
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("--offline"), "Help should mention --offline flag");
+}
+
+#[test]
+fn test_offline_does_not_query_network_sources() {
+    // In offline mode, querying a package that only exists in network registries
+    // should return "not found" since we only check local sources
+    let output = latest_cmd()
+        .args(["--offline", "express"])  // express is only in npm (network)
+        .output()
+        .expect("Failed to run");
+
+    // Should not find it since npm is a network source
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("not found"), "Should not find network-only package in offline mode");
+}
+
+#[test]
+fn test_offline_json_output() {
+    let output = latest_cmd()
+        .args(["--offline", "--json", "nonexistent-pkg-xyz"])
+        .output()
+        .expect("Failed to run");
+
+    assert!(!output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: serde_json::Value = serde_json::from_str(&stdout).expect("Invalid JSON");
+    assert_eq!(json["status"], "not_found");
+}
+
+#[test]
+fn test_offline_with_source_override() {
+    // Even with --offline, if --source specifies a network source,
+    // it should be filtered out (offline takes precedence)
+    let output = latest_cmd()
+        .args(["--offline", "--source", "npm", "express"])
+        .output()
+        .expect("Failed to run");
+
+    // npm is a network source, so should be filtered out in offline mode
+    assert!(!output.status.success());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("not found"));
+}

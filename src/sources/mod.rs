@@ -63,9 +63,15 @@ impl JsonApiSource {
         self.url_template.replace("{}", &encoded_package)
     }
 
+    /// Default timeout for HTTP requests in seconds
+    const CURL_TIMEOUT_SECS: &'static str = "10";
+
     fn fetch(&self, package: &str) -> Option<String> {
         let url = self.build_url(package);
-        let output = Command::new("curl").args(["-sf", &url]).output().ok()?;
+        let output = Command::new("curl")
+            .args(["-sf", "-m", Self::CURL_TIMEOUT_SECS, &url])
+            .output()
+            .ok()?;
         if !output.status.success() {
             return None;
         }
