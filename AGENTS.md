@@ -10,11 +10,21 @@
 cargo build           # Build
 cargo test            # Run all tests (unit + integration)
 cargo run -- <args>   # Run directly
+cargo bench           # Run benchmarks (criterion)
 cargo fmt             # Format code
 cargo clippy          # Check lints
 ```
 
 **Before committing**: Always run `cargo test`, `cargo clippy`, and `cargo build` to ensure nothing is broken.
+
+### Fuzzing (requires nightly Rust)
+
+```bash
+rustup install nightly
+cargo +nightly fuzz run fuzz_version_parsing
+cargo +nightly fuzz run fuzz_package_arg
+cargo +nightly fuzz run fuzz_config_parsing
+```
 
 ## Issue Tracking (bd)
 
@@ -62,6 +72,7 @@ When ending a session, complete ALL steps:
 
 ```
 src/
+├── lib.rs           # Library crate (exposed for benchmarks/fuzz)
 ├── main.rs          # CLI, lookup engine, output formatting
 ├── cache.rs         # Response caching (~/.cache/latest/)
 ├── config.rs        # Configuration (~/.config/latest/config.toml)
@@ -70,11 +81,14 @@ src/
     ├── mod.rs       # Source trait, Ecosystem enum
     ├── path.rs      # $PATH binary lookup
     ├── brew.rs      # Homebrew
-    ├── npm.rs       # npm registry
+    ├── apt.rs       # APT packages (Debian/Ubuntu)
     ├── pip.rs       # PyPI
-    ├── cargo.rs     # crates.io
-    ├── go.rs        # Go modules
     └── uv.rs        # uv project-local Python packages
+benches/
+└── benchmarks.rs    # Criterion benchmarks
+fuzz/
+├── Cargo.toml       # Fuzz target configuration
+└── fuzz_targets/    # libfuzzer targets
 ```
 
 ## Adding New Sources

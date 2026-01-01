@@ -1,0 +1,36 @@
+[package]
+name = "latest-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+toml = "0.8"
+
+[dependencies.latest]
+path = ".."
+
+[[bin]]
+name = "fuzz_version_parsing"
+path = "fuzz_targets/fuzz_version_parsing.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_package_arg"
+path = "fuzz_targets/fuzz_package_arg.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_config_parsing"
+path = "fuzz_targets/fuzz_config_parsing.rs"
+test = false
+doc = false
+bench = false

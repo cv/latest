@@ -1,12 +1,9 @@
-mod cache;
-mod config;
-mod project;
-mod sources;
-
 use clap::Parser;
-use config::Config;
+use latest::cache;
+use latest::config::Config;
+use latest::project;
+use latest::sources::{self, Source, source_by_name};
 use rayon::prelude::*;
-use sources::{Source, source_by_name};
 
 #[derive(Parser)]
 #[command(name = "latest")]
@@ -153,16 +150,7 @@ impl PackageResult {
 // Core logic
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn is_newer(installed: &str, latest: &str) -> bool {
-    let parse = |v: &str| -> Vec<u64> {
-        v.split(|c: char| !c.is_ascii_digit()).filter_map(|s| s.parse().ok()).collect()
-    };
-    let (a, b) = (parse(installed), parse(latest));
-    (0..a.len().max(b.len())).any(|i| {
-        let (x, y) = (*a.get(i).unwrap_or(&0), *b.get(i).unwrap_or(&0));
-        x < y && (0..i).all(|j| a.get(j) == b.get(j))
-    })
-}
+use latest::{is_newer, parse_package_arg};
 
 /// Query a source with optional caching (only for non-local sources)
 #[allow(clippy::collapsible_if)] // Let chains require nightly rustfmt
@@ -402,19 +390,6 @@ fn output_results(cli: &Cli, results: &[PackageResult]) {
 // Main
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Parse a package argument, extracting optional source prefix.
-/// e.g., "npm:express" -> (Some("npm"), "express")
-///       "express" -> (None, "express")
-fn parse_package_arg(arg: &str) -> (Option<String>, String) {
-    if let Some((prefix, rest)) = arg.split_once(':') {
-        // Only treat as source prefix if it's a known source name
-        if source_by_name(prefix).is_some() {
-            return (Some(prefix.to_string()), rest.to_string());
-        }
-    }
-    (None, arg.to_string())
-}
-
 fn main() {
     let cli = Cli::parse();
     let config = Config::load();
@@ -493,7 +468,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sources::Ecosystem;
+    use latest::sources::Ecosystem;
 
     #[test]
     fn test_is_newer() {

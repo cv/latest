@@ -124,6 +124,27 @@ latest -q -s npm express
 cargo build           # Build
 cargo test            # Run tests
 cargo run -- node     # Run directly
+cargo bench           # Run benchmarks
+```
+
+### Benchmarks
+
+Benchmarks use [Criterion](https://bheisler.github.io/criterion.rs/book/) for statistical analysis. Results and HTML reports are saved to `target/criterion/`.
+
+```bash
+cargo bench                              # Run all benchmarks
+cargo bench -- version_comparison        # Run specific group
+```
+
+### Fuzzing
+
+Fuzz targets use [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) (requires nightly Rust):
+
+```bash
+rustup install nightly
+cargo +nightly fuzz run fuzz_version_parsing
+cargo +nightly fuzz run fuzz_package_arg
+cargo +nightly fuzz run fuzz_config_parsing
 ```
 
 ## License
