@@ -24,15 +24,6 @@ cargo test proptests                     # 256 random cases per test
 PROPTEST_CASES=10000 cargo test proptests # More thorough
 ```
 
-### Fuzzing (requires nightly Rust)
-
-```bash
-rustup install nightly
-cargo +nightly fuzz run fuzz_version_parsing
-cargo +nightly fuzz run fuzz_package_arg
-cargo +nightly fuzz run fuzz_config_parsing
-```
-
 ## Issue Tracking (bd)
 
 This project uses **bd** for issue tracking.
@@ -93,9 +84,6 @@ src/
     └── uv.rs        # uv project-local Python packages
 benches/
 └── benchmarks.rs    # Criterion benchmarks
-fuzz/
-├── Cargo.toml       # Fuzz target configuration
-└── fuzz_targets/    # libfuzzer targets
 ```
 
 ## Adding New Sources

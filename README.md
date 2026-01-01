@@ -145,17 +145,6 @@ cargo test proptests                     # Run with default 256 cases
 PROPTEST_CASES=10000 cargo test proptests # Run with more cases
 ```
 
-### Fuzzing
-
-Fuzz targets use [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) (requires nightly Rust):
-
-```bash
-rustup install nightly
-cargo +nightly fuzz run fuzz_version_parsing
-cargo +nightly fuzz run fuzz_package_arg
-cargo +nightly fuzz run fuzz_config_parsing
-```
-
 ## License
 
 MIT

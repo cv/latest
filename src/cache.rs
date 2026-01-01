@@ -19,6 +19,7 @@ fn cache_dir() -> Option<PathBuf> {
 }
 
 /// Get cached version if valid (not expired)
+#[must_use]
 pub fn get(source: &str, package: &str) -> Option<String> {
     let path = cache_dir()?.join(format!("{}-{}.json", source, sanitize(package)));
     let content = fs::read_to_string(&path).ok()?;

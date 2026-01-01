@@ -413,11 +413,11 @@ fn main() {
     let global_source = cli.source.as_deref().or(source_override);
 
     // Validate global source if specified via --source
-    if let Some(name) = cli.source.as_deref() {
-        if source_by_name(name).is_none() {
-            eprintln!("Unknown source: {name}");
-            std::process::exit(1);
-        }
+    if let Some(name) = cli.source.as_deref()
+        && source_by_name(name).is_none()
+    {
+        eprintln!("Unknown source: {name}");
+        std::process::exit(1);
     }
 
     let use_cache = !cli.no_cache;

@@ -15,6 +15,7 @@ impl Default for Config {
 }
 
 impl Config {
+    #[must_use]
     pub fn load() -> Self {
         dirs::config_dir()
             .map(|p| p.join("latest/config.toml"))

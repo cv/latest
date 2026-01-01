@@ -36,10 +36,12 @@ pub trait Source: Send + Sync {
     fn ecosystem(&self) -> Ecosystem;
 }
 
+#[must_use]
 pub fn extract_version(text: &str) -> Option<String> {
     VERSION_REGEX.captures(text).and_then(|c| c.get(1)).map(|m| m.as_str().to_string())
 }
 
+#[must_use]
 pub fn extract_version_field(text: &str) -> Option<String> {
     text.lines().find_map(|l| l.strip_prefix("Version:").map(|v| v.trim().to_string()))
 }
