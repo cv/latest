@@ -31,11 +31,14 @@ This project uses **bd** for issue tracking.
 ```bash
 bd ready              # Find available work
 bd show <id>          # View issue details
-bd create             # Create a new issue
+bd create "title" -d "description" -p P2 -l label1,label2  # Create issue
 bd update <id> --status in_progress  # Claim work
 bd close <id>         # Complete work
 bd list               # List all open issues
+bd sync               # Sync issues to JSONL
 ```
+
+**Priority scale**: P0 (critical) → P4 (lowest). Use P2 for medium, P3 for low.
 
 ## Git Workflow
 
@@ -66,6 +69,91 @@ When ending a session, complete ALL steps:
 
 **Critical**: Work is NOT complete until everything is committed. If a remote exists, push is mandatory.
 
+## Delegating to Subagents
+
+For well-defined, independent tasks, use subagents. This enables parallel execution and keeps the main agent focused on coordination.
+
+### When to Use Subagents
+
+- **Batch implementation**: Multiple independent issues/features
+- **Code reviews**: Security audits, architecture review
+- **Repetitive tasks**: Adding similar features (e.g., new package sources)
+
+### Subagent Task Template
+
+Tasks must be **completely self-contained**. Include:
+
+```
+## Project Location
+/Users/carlosvillela/src/latest
+
+## Problem
+[Clear description of what needs to be done]
+
+## Requirements
+1. **TDD**: Write tests FIRST, then implement
+2. **DRY**: Don't repeat yourself  
+3. **DTSTTCPW**: Do the simplest thing that could possibly work
+4. **Keep the linter happy**: Run `cargo clippy` and fix warnings
+
+## Implementation Steps
+1. [Specific steps]
+2. [Including files to read/modify]
+3. [Expected approach]
+
+## Verification
+- All existing tests must pass
+- New tests for the feature must pass
+- No clippy warnings
+- Build succeeds (`cargo build --release`)
+```
+
+### Parallel Subagent Pattern
+
+When implementing multiple independent issues:
+
+```
+1. Launch subagents in parallel (one per issue)
+2. Wait for all to complete
+3. Review changes: `git diff --stat HEAD`
+4. Run quality gates: `cargo test && cargo clippy`
+5. Close issues: `bd close <id>` for each
+6. Commit all together with descriptive message
+7. Push
+```
+
+### Example: Security Review → Issues → Implementation
+
+This workflow worked well for the security hardening work:
+
+1. **Review**: Subagent with high thinking does thorough security audit
+2. **File issues**: Create bd issues for each finding with proper priority
+3. **Implement**: Launch parallel subagents, one per issue
+4. **Verify**: Review diffs, run tests, check clippy
+5. **Ship**: Close issues, commit, push, release
+
+## Releasing
+
+```bash
+# 1. Bump version
+# Edit Cargo.toml: version = "X.Y.Z"
+
+# 2. Build to update Cargo.lock
+cargo build --release
+
+# 3. Commit and tag
+git add -A
+git commit -m "chore: bump version to X.Y.Z"
+git tag -a vX.Y.Z -m "vX.Y.Z - Release description"
+
+# 4. Push (triggers release workflow)
+git push && git push --tags
+
+# 5. Monitor release
+gh run list --limit 3
+gh release view vX.Y.Z
+```
+
 ## Code Structure
 
 ```
@@ -76,21 +164,44 @@ src/
 ├── config.rs        # Configuration (~/.config/latest/config.toml)
 ├── project.rs       # Project file scanning
 └── sources/
-    ├── mod.rs       # Source trait, Ecosystem enum
+    ├── mod.rs       # Source trait, Ecosystem enum, JsonApiSource
     ├── path.rs      # $PATH binary lookup
     ├── brew.rs      # Homebrew
     ├── apt.rs       # APT packages (Debian/Ubuntu)
     ├── pip.rs       # PyPI
     └── uv.rs        # uv project-local Python packages
+tests/
+└── integration_tests.rs  # CLI integration tests
 benches/
 └── benchmarks.rs    # Criterion benchmarks
+.github/workflows/
+├── release.yml      # cargo-dist release automation
+└── security.yml     # Daily cargo-audit vulnerability scanning
 ```
 
 ## Adding New Sources
 
-1. Create `src/sources/newname.rs` implementing the `Source` trait
-2. Register in `src/sources/mod.rs` (add to `SourceType` enum and `from_name`)
-3. Add to default precedence in `src/config.rs`
-4. Add tests
+Most new sources can use `JsonApiSource` in `src/sources/mod.rs`:
+
+```rust
+static NEWSOURCE: JsonApiSource = JsonApiSource {
+    name: "newsource",
+    ecosystem: Ecosystem::NewEcosystem,  // Add to Ecosystem enum if needed
+    url_template: "https://registry.example.com/packages/{}",
+    version_path: "version",  // JSON path to version field (dot-separated)
+};
+```
+
+Then register in `all_sources()` and `source_by_name()`.
+
+For complex sources needing custom logic, create `src/sources/newname.rs` implementing the `Source` trait.
+
+**Checklist**:
+1. Add source (JsonApiSource or custom impl)
+2. Register in `src/sources/mod.rs` 
+3. Add to `--source` help text in `src/main.rs`
+4. Add to default precedence in `src/config.rs`
+5. Add tests (unit + integration)
+6. Update SECURITY.md if source has special behavior
 
 See `bd show latest-rl5` for Source trait details.
