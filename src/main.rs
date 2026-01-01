@@ -347,13 +347,17 @@ fn format_result(r: &PackageResult, show_name: bool) -> String {
     match r.status {
         Status::UpToDate => {
             let info = r.installed.as_ref().unwrap();
-            let installed_marker = if info.local { " (installed)" } else { "" };
+            let installed_marker = if info.local {
+                if info.version == "installed" { " (built-in)" } else { " (installed)" }
+            } else { "" };
             format!("{pkg_prefix}{}: {}{}", info.source, info.version, installed_marker)
         }
         Status::Outdated => {
             let installed = r.installed.as_ref().unwrap();
             let latest = &r.latest.as_ref().unwrap().version;
-            let installed_marker = if installed.local { " (installed)" } else { "" };
+            let installed_marker = if installed.local {
+                if installed.version == "installed" { " (built-in)" } else { " (installed)" }
+            } else { "" };
             format!(
                 "{pkg_prefix}{}: {}{} → {} available",
                 installed.source, installed.version, installed_marker, latest
@@ -399,7 +403,9 @@ fn output_results(cli: &Cli, results: &[PackageResult]) {
                 eprintln!("{}", if results.len() > 1 { "  not found" } else { "not found" });
             } else {
                 for v in &r.available {
-                    let mark = if v.local { " (installed)" } else { "" };
+                    let mark = if v.local {
+                        if v.version == "installed" { " (built-in)" } else { " (installed)" }
+                    } else { "" };
                     let line = format!("{}: {}{}", v.source, v.version, mark);
                     println!("{}", if results.len() > 1 { format!("  {line}") } else { line });
                 }
@@ -753,5 +759,45 @@ mod tests {
         let r = lookup("node", &sources, LookupMode::All, false);
         assert_eq!(r.available.len(), 2);
         assert!(r.available.iter().all(|v| v.local));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Format result tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_format_result_builtin_command() {
+        // When version is "installed" (unknown version), show "(built-in)" not "(installed)"
+        let r = PackageResult::up_to_date(
+            "ping",
+            VersionInfo { version: "installed".to_string(), source: "path".to_string(), local: true },
+            vec![],
+        );
+        let output = format_result(&r, false);
+        assert_eq!(output, "path: installed (built-in)");
+    }
+
+    #[test]
+    fn test_format_result_installed_with_version() {
+        // When we have an actual version, show "(installed)"
+        let r = PackageResult::up_to_date(
+            "node",
+            VersionInfo { version: "22.0.0".to_string(), source: "path".to_string(), local: true },
+            vec![],
+        );
+        let output = format_result(&r, false);
+        assert_eq!(output, "path: 22.0.0 (installed)");
+    }
+
+    #[test]
+    fn test_format_result_network_source_no_marker() {
+        // Network sources don't get any marker
+        let r = PackageResult::up_to_date(
+            "express",
+            VersionInfo { version: "5.0.0".to_string(), source: "npm".to_string(), local: false },
+            vec![],
+        );
+        let output = format_result(&r, false);
+        assert_eq!(output, "npm: 5.0.0");
     }
 }
