@@ -32,8 +32,9 @@ latest node go rust
 ```
 latest                        # Scan project files in current directory
 latest <package>              # Check specific package(s)
+latest npm:express            # Query specific source with prefix
 latest --all node             # Show all sources
-latest -s cargo serde         # Query specific source
+latest -s cargo serde         # Query specific source (alternative syntax)
 latest --json                 # JSON output for scripting
 latest -q node                # Quiet: just version number
 ```
@@ -42,10 +43,11 @@ latest -q node                # Quiet: just version number
 
 | Output | Meaning |
 |--------|---------|
-| `25.2.1  ✓` | Up to date |
-| `24.0.0 → 25.2.1 available` | Outdated |
+| `pip: 0.6.0 (installed)` | Up to date, shows source |
+| `npm: 24.0.0 → 25.2.1 available` | Outdated |
 | `not installed (available: ...)` | Not installed, with install hints |
 | `not found` | Package doesn't exist in any source |
+| `⚠ Also found in: brew, npm` | Package exists in multiple ecosystems |
 
 ## Exit Codes
 
@@ -93,6 +95,15 @@ precedence = ["path", "brew", "npm", "uv", "pip", "go", "cargo"]
 # Check if project dependencies are current
 latest
 
+# Check a package (shows source and cross-ecosystem warnings)
+latest latest
+# pip: 0.6.0 (installed)
+# ⚠ Also found in: brew, npm, cargo, gem
+
+# Query a specific ecosystem with prefix syntax
+latest npm:latest
+# npm: 0.2.0
+
 # JSON output for scripting
 latest --json | jq '.[] | select(.status != "up_to_date")'
 
@@ -102,7 +113,7 @@ latest --all node
 # brew: 25.2.1
 # npm: 24.12.0
 
-# Quiet mode for scripts
+# Quiet mode for scripts (version only, no source prefix)
 latest -q -s npm express
 # 5.2.1
 ```
