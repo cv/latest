@@ -1,7 +1,13 @@
 mod apt;
 mod brew;
+mod composer;
+mod conda;
+mod docker;
+mod maven;
+mod nuget;
 mod path;
 mod pip;
+mod swift;
 mod uv;
 
 use serde::Deserialize;
@@ -25,6 +31,11 @@ pub enum Ecosystem {
     Ruby,
     Beam,
     Dart,
+    Php,
+    Jvm,
+    Container,
+    Dotnet,
+    Swift,
 }
 
 pub trait Source: Send + Sync {
@@ -108,8 +119,14 @@ fn extract_json_path(json: &str, path: &str) -> Option<String> {
 
 pub use apt::AptSource;
 pub use brew::BrewSource;
+pub use composer::ComposerSource;
+pub use conda::CondaSource;
+pub use docker::DockerSource;
+pub use maven::MavenSource;
+pub use nuget::NuGetSource;
 pub use path::PathSource;
 pub use pip::PipSource;
+pub use swift::SwiftSource;
 pub use uv::UvSource;
 
 // JSON API sources - no CLI needed, just HTTP
@@ -187,17 +204,23 @@ macro_rules! define_sources {
 }
 
 define_sources! {
-    "path",  Path  => PathSource,  true,  Ecosystem::System;
-    "brew",  Brew  => BrewSource,  false, Ecosystem::System;
-    "apt",   Apt   => AptSource,   false, Ecosystem::System;
-    "npm",   Npm   => &NPM,        false, Ecosystem::Npm;
-    "uv",    Uv    => UvSource,    true,  Ecosystem::Python;
-    "pip",   Pip   => PipSource,   true,  Ecosystem::Python;
-    "go",    Go    => &GO,         false, Ecosystem::Go;
-    "cargo", Cargo => &CARGO,      false, Ecosystem::Cargo;
-    "gem",   Gem   => &GEM,        false, Ecosystem::Ruby;
-    "hex",   Hex   => &HEX,        false, Ecosystem::Beam;
-    "pub",   Pub   => &PUB,        false, Ecosystem::Dart;
+    "path",     Path     => PathSource,     true,  Ecosystem::System;
+    "brew",     Brew     => BrewSource,     false, Ecosystem::System;
+    "apt",      Apt      => AptSource,      false, Ecosystem::System;
+    "npm",      Npm      => &NPM,           false, Ecosystem::Npm;
+    "uv",       Uv       => UvSource,       true,  Ecosystem::Python;
+    "pip",      Pip      => PipSource,      true,  Ecosystem::Python;
+    "conda",    Conda    => CondaSource,    false, Ecosystem::Python;
+    "go",       Go       => &GO,            false, Ecosystem::Go;
+    "cargo",    Cargo    => &CARGO,         false, Ecosystem::Cargo;
+    "gem",      Gem      => &GEM,           false, Ecosystem::Ruby;
+    "hex",      Hex      => &HEX,           false, Ecosystem::Beam;
+    "pub",      Pub      => &PUB,           false, Ecosystem::Dart;
+    "composer", Composer => ComposerSource, false, Ecosystem::Php;
+    "maven",    Maven    => MavenSource,    false, Ecosystem::Jvm;
+    "docker",   Docker   => DockerSource,   false, Ecosystem::Container;
+    "nuget",    Nuget    => NuGetSource,    false, Ecosystem::Dotnet;
+    "swift",    Swift    => SwiftSource,    false, Ecosystem::Swift;
 }
 
 #[cfg(test)]
