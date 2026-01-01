@@ -58,8 +58,13 @@ struct JsonApiSource {
 }
 
 impl JsonApiSource {
+    fn build_url(&self, package: &str) -> String {
+        let encoded_package = urlencoding::encode(package);
+        self.url_template.replace("{}", &encoded_package)
+    }
+
     fn fetch(&self, package: &str) -> Option<String> {
-        let url = self.url_template.replace("{}", package);
+        let url = self.build_url(package);
         let output = Command::new("curl").args(["-sf", &url]).output().ok()?;
         if !output.status.success() {
             return None;
@@ -231,5 +236,67 @@ mod tests {
             assert!(source_by_name(name).is_some(), "missing: {}", name);
         }
         assert!(source_by_name("invalid").is_none());
+    }
+
+    #[test]
+    fn test_url_encoding_normal_package() {
+        let source = JsonApiSource {
+            name: "test",
+            ecosystem: Ecosystem::Npm,
+            url_template: "https://example.com/{}",
+            version_path: "version",
+        };
+        assert_eq!(source.build_url("express"), "https://example.com/express");
+        assert_eq!(source.build_url("lodash"), "https://example.com/lodash");
+    }
+
+    #[test]
+    fn test_url_encoding_special_characters() {
+        let source = JsonApiSource {
+            name: "test",
+            ecosystem: Ecosystem::Npm,
+            url_template: "https://example.com/{}",
+            version_path: "version",
+        };
+        // Path traversal attempt should be encoded
+        assert_eq!(
+            source.build_url("../../api/v1/users"),
+            "https://example.com/..%2F..%2Fapi%2Fv1%2Fusers"
+        );
+        // Query injection should be encoded
+        assert_eq!(
+            source.build_url("express?malicious=true"),
+            "https://example.com/express%3Fmalicious%3Dtrue"
+        );
+        // Fragment injection should be encoded
+        assert_eq!(source.build_url("pkg#anchor"), "https://example.com/pkg%23anchor");
+        // Ampersand should be encoded
+        assert_eq!(source.build_url("a&b=c"), "https://example.com/a%26b%3Dc");
+        // Spaces should be encoded
+        assert_eq!(source.build_url("my package"), "https://example.com/my%20package");
+    }
+
+    #[test]
+    fn test_url_encoding_unicode() {
+        let source = JsonApiSource {
+            name: "test",
+            ecosystem: Ecosystem::Npm,
+            url_template: "https://example.com/{}",
+            version_path: "version",
+        };
+        // Unicode should be percent-encoded
+        assert_eq!(source.build_url("日本語"), "https://example.com/%E6%97%A5%E6%9C%AC%E8%AA%9E");
+    }
+
+    #[test]
+    fn test_url_encoding_scoped_npm_packages() {
+        let source = JsonApiSource {
+            name: "test",
+            ecosystem: Ecosystem::Npm,
+            url_template: "https://example.com/{}",
+            version_path: "version",
+        };
+        // @ and scoped package names - @ gets encoded
+        assert_eq!(source.build_url("@scope/pkg"), "https://example.com/%40scope%2Fpkg");
     }
 }
