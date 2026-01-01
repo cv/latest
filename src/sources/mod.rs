@@ -88,13 +88,12 @@ impl Source for &'static JsonApiSource {
 }
 
 fn extract_json_path(json: &str, path: &str) -> Option<String> {
-    let mut current = json;
+    let parsed: serde_json::Value = serde_json::from_str(json).ok()?;
+    let mut current = &parsed;
     for key in path.split('.') {
-        current = current.split(&format!("\"{key}\":")).nth(1)?;
+        current = current.get(key)?;
     }
-    let start = current.find('"')? + 1;
-    let rest = &current[start..];
-    Some(rest[..rest.find('"')?].to_string())
+    current.as_str().map(String::from)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -215,6 +214,50 @@ mod tests {
         assert_eq!(
             extract_json_path(r#"{"latest":{"version":"2.0"}}"#, "latest.version"),
             Some("2.0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_json_path_nested_objects() {
+        // Test deeply nested paths like "dist-tags.latest"
+        assert_eq!(
+            extract_json_path(r#"{"dist-tags":{"latest":"3.0.0"}}"#, "dist-tags.latest"),
+            Some("3.0.0".to_string())
+        );
+        assert_eq!(
+            extract_json_path(r#"{"crate":{"max_stable_version":"1.5.0"}}"#, "crate.max_stable_version"),
+            Some("1.5.0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_json_path_key_in_string_value() {
+        // Keys appearing in string values should NOT confuse the parser
+        // The naive string-split approach would extract "evil" instead of "1.0.0"
+        let malicious = r#"{"data":"\"version\":\"evil\"","version":"1.0.0"}"#;
+        assert_eq!(
+            extract_json_path(malicious, "version"),
+            Some("1.0.0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_json_path_escaped_quotes() {
+        // Escaped quotes in values should be handled correctly
+        let json = r#"{"name":"test\"pkg","version":"2.0.0"}"#;
+        assert_eq!(
+            extract_json_path(json, "version"),
+            Some("2.0.0".to_string())
+        );
+    }
+
+    #[test]
+    fn test_extract_json_path_unicode_escapes() {
+        // Unicode escapes should be handled correctly
+        let json = r#"{"version":"1.0.0","desc":"test\u0022value"}"#;
+        assert_eq!(
+            extract_json_path(json, "version"),
+            Some("1.0.0".to_string())
         );
     }
 
