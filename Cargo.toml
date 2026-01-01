@@ -1,10 +1,11 @@
 [package]
 name = "latest"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Find the latest version of any command, package, or library"
 license = "MIT"
 repository = "https://github.com/cv/latest"
+homepage = "https://github.com/cv/latest"
 keywords = ["cli", "version", "package-manager"]
 categories = ["command-line-utilities"]
 
