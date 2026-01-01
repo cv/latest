@@ -164,12 +164,18 @@ src/
 ├── config.rs        # Configuration (~/.config/latest/config.toml)
 ├── project.rs       # Project file scanning
 └── sources/
-    ├── mod.rs       # Source trait, Ecosystem enum, JsonApiSource
-    ├── path.rs      # $PATH binary lookup
-    ├── brew.rs      # Homebrew
+    ├── mod.rs       # Source trait, Ecosystem enum, JsonApiSource, define_sources! macro
+    ├── path.rs      # $PATH binary lookup (local)
+    ├── brew.rs      # Homebrew (macOS)
     ├── apt.rs       # APT packages (Debian/Ubuntu)
-    ├── pip.rs       # PyPI
-    └── uv.rs        # uv project-local Python packages
+    ├── pip.rs       # pip show (local Python packages)
+    ├── uv.rs        # uv project-local Python packages (local)
+    ├── conda.rs     # Conda packages
+    ├── composer.rs  # Packagist (PHP)
+    ├── maven.rs     # Maven Central (JVM)
+    ├── docker.rs    # Docker Hub
+    ├── nuget.rs     # NuGet (.NET)
+    └── swift.rs     # Swift Package Index
 tests/
 └── integration_tests.rs  # CLI integration tests
 benches/
@@ -178,6 +184,8 @@ benches/
 ├── release.yml      # cargo-dist release automation
 └── security.yml     # Daily cargo-audit vulnerability scanning
 ```
+
+**Note**: npm, cargo, go, gem, hex, pub use `JsonApiSource` in mod.rs (no separate file).
 
 ## Adding New Sources
 
@@ -192,16 +200,12 @@ static NEWSOURCE: JsonApiSource = JsonApiSource {
 };
 ```
 
-Then register in `all_sources()` and `source_by_name()`.
+Then register in the `define_sources!` macro in `src/sources/mod.rs`.
 
 For complex sources needing custom logic, create `src/sources/newname.rs` implementing the `Source` trait.
 
 **Checklist**:
-1. Add source (JsonApiSource or custom impl)
-2. Register in `src/sources/mod.rs` 
-3. Add to `--source` help text in `src/main.rs`
-4. Add to default precedence in `src/config.rs`
-5. Add tests (unit + integration)
-6. Update SECURITY.md if source has special behavior
-
-See `bd show latest-rl5` for Source trait details.
+1. Add source (JsonApiSource in mod.rs, or custom impl in new file)
+2. Register in `define_sources!` macro in `src/sources/mod.rs`
+3. Add tests (unit + integration)
+4. Update SECURITY.md if source sends data to external services

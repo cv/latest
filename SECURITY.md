@@ -14,9 +14,16 @@ When querying package versions, `latest` sends **package names** to public regis
 | gem | rubygems.org | Gem name |
 | hex | hex.pm | Package name |
 | pub | pub.dev | Package name |
+| composer | packagist.org | Package name |
+| maven | search.maven.org | Group:artifact |
+| docker | registry.hub.docker.com | Image name |
+| nuget | api.nuget.org | Package name |
+| swift | api.github.com | Owner/repo |
+| conda | Configured conda channels (via `conda` CLI) | Package name |
 | brew | Homebrew API (via `brew` CLI) | Formula name |
 | apt | Configured apt sources (via `apt` CLI) | Package name |
-| pip | PyPI (via `pip` CLI) | Package name |
+
+**Note**: pip and uv are local sources - they only check locally installed packages.
 
 Requests are made using `curl` with default headers. No authentication tokens or identifying information beyond standard HTTP headers are sent.
 

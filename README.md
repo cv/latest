@@ -21,7 +21,7 @@ latest node go rust
 
 ## Features
 
-- **7 sources**: path, brew, npm, pip, cargo, go, uv
+- **17 sources**: System (path, brew, apt), Python (uv, pip, conda), JavaScript (npm), Rust (cargo), Go (go), Ruby (gem), Elixir (hex), Dart (pub), PHP (composer), JVM (maven), Docker (docker), .NET (nuget), Swift (swift)
 - **Project scanning**: Auto-detects Cargo.toml, package.json, uv.lock, pyproject.toml, go.mod
 - **Ecosystem-aware**: Compares versions within the same ecosystem (won't flag npm's `go` as newer than Go the language)
 - **Context-aware install hints**: Suggests `cargo add` in a Cargo project, `npm install` (not `-g`) in a Node project
@@ -63,11 +63,21 @@ latest -q node                # Quiet: just version number
 |--------|------|-----------|-------------|
 | path | local | System | Commands in $PATH |
 | brew | registry | System | Homebrew packages |
+| apt | registry | System | APT packages (Debian/Ubuntu) |
 | npm | registry | Npm | npm registry |
-| pip | local+registry | Python | PyPI (checks local first) |
-| cargo | registry | Cargo | crates.io |
-| go | registry | Go | Go module proxy |
 | uv | local | Python | uv project-local packages |
+| pip | local | Python | Locally installed pip packages |
+| conda | registry | Python | Conda packages |
+| go | registry | Go | Go module proxy |
+| cargo | registry | Cargo | crates.io |
+| gem | registry | Ruby | RubyGems |
+| hex | registry | Beam | Hex.pm (Elixir/Erlang) |
+| pub | registry | Dart | pub.dev |
+| composer | registry | Php | Packagist (PHP) |
+| maven | registry | Jvm | Maven Central |
+| docker | registry | Container | Docker Hub |
+| nuget | registry | Dotnet | NuGet (.NET) |
+| swift | registry | Swift | Swift Package Index |
 
 ## Project Scanning
 
@@ -86,7 +96,7 @@ When run without arguments, `latest` scans for project files in this order:
 Create `~/.config/latest/config.toml` to customize source precedence:
 
 ```toml
-precedence = ["path", "brew", "npm", "uv", "pip", "go", "cargo"]
+precedence = ["path", "brew", "apt", "npm", "uv", "pip", "conda", "go", "cargo", "gem", "hex", "pub", "composer", "maven", "docker", "nuget", "swift"]
 ```
 
 ## Examples

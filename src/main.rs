@@ -44,7 +44,7 @@ struct Cli {
     /// Packages to look up (if empty, scans project files)
     packages: Vec<String>,
 
-    /// Only check a specific source (path, brew, npm, pip, go, cargo, uv)
+    /// Only check a specific source (e.g., npm, cargo, brew, pip, go)
     #[arg(short, long)]
     source: Option<String>,
 
