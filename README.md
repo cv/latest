@@ -136,6 +136,15 @@ cargo bench                              # Run all benchmarks
 cargo bench -- version_comparison        # Run specific group
 ```
 
+### Property-Based Testing
+
+Property tests use [proptest](https://proptest-rs.github.io/proptest/intro.html) for randomized input generation (works on stable Rust):
+
+```bash
+cargo test proptests                     # Run with default 256 cases
+PROPTEST_CASES=10000 cargo test proptests # Run with more cases
+```
+
 ### Fuzzing
 
 Fuzz targets use [cargo-fuzz](https://rust-fuzz.github.io/book/cargo-fuzz.html) (requires nightly Rust):

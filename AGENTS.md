@@ -17,6 +17,13 @@ cargo clippy          # Check lints
 
 **Before committing**: Always run `cargo test`, `cargo clippy`, and `cargo build` to ensure nothing is broken.
 
+### Property-Based Testing (proptest)
+
+```bash
+cargo test proptests                     # 256 random cases per test
+PROPTEST_CASES=10000 cargo test proptests # More thorough
+```
+
 ### Fuzzing (requires nightly Rust)
 
 ```bash

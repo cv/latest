@@ -10,8 +10,9 @@ use std::sync::LazyLock;
 
 static VERSION_REGEX: LazyLock<regex::Regex> = LazyLock::new(|| {
     // This regex is a compile-time constant and will never fail
+    // Use [0-9] instead of \d to avoid matching Unicode digits (e.g., ೦)
     #[allow(clippy::unwrap_used)]
-    regex::Regex::new(r"v?(\d+\.\d+(?:\.\d+)?(?:-[a-zA-Z0-9.-]+)?)").unwrap()
+    regex::Regex::new(r"v?([0-9]+\.[0-9]+(?:\.[0-9]+)?(?:-[a-zA-Z0-9.-]+)?)").unwrap()
 });
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
