@@ -116,9 +116,9 @@ fn test_cargo_serde() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    // Should contain a version and checkmark
+    // Should contain source and version
+    assert!(stdout.contains("cargo:"), "Expected source prefix: {}", stdout);
     assert!(stdout.contains('.'), "Expected version with dots: {}", stdout);
-    assert!(stdout.contains('✓'), "Expected checkmark: {}", stdout);
 }
 
 #[test]
@@ -166,4 +166,47 @@ fn test_quiet_mode() {
 fn test_outdated_exit_code() {
     // This test is tricky - we need a package where installed != latest
     // For now, skip this test as it depends on system state
+}
+
+// Test prefix syntax (npm:express)
+#[test]
+fn test_prefix_syntax() {
+    let output = latest_cmd().arg("npm:express").output().expect("Failed to run");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    // Should show npm source
+    assert!(stdout.contains("npm:"), "Expected npm source: {}", stdout);
+    assert!(stdout.contains('.'), "Expected version with dots: {}", stdout);
+}
+
+#[test]
+fn test_prefix_syntax_cargo() {
+    let output = latest_cmd().arg("cargo:serde").output().expect("Failed to run");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    assert!(stdout.contains("cargo:"), "Expected cargo source: {}", stdout);
+}
+
+#[test]
+fn test_source_in_output() {
+    let output = latest_cmd().arg("npm:express").output().expect("Failed to run");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    // Output should always include source prefix
+    assert!(stdout.starts_with("npm:"), "Output should start with source: {}", stdout);
+}
+
+#[test]
+fn test_json_includes_source() {
+    let output =
+        latest_cmd().args(["--json", "npm:express"]).output().expect("Failed to run");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: serde_json::Value = serde_json::from_str(&stdout).expect("Invalid JSON");
+    // JSON should include source field
+    assert_eq!(json["installed"]["source"], "npm");
 }

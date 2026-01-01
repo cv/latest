@@ -1,4 +1,4 @@
-use super::{extract_version, Ecosystem, Source};
+use super::{Ecosystem, Source, extract_version};
 use std::process::Command;
 
 pub struct PathSource;

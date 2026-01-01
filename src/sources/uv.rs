@@ -1,4 +1,4 @@
-use super::{extract_version_field, Ecosystem, Source};
+use super::{Ecosystem, Source, extract_version_field};
 use std::fs;
 use std::path::Path;
 use std::process::Command;

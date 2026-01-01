@@ -1,4 +1,4 @@
-use crate::sources::{default_precedence, SourceType};
+use crate::sources::{SourceType, default_precedence};
 use serde::Deserialize;
 use std::fs;
 
