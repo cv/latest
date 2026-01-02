@@ -322,13 +322,14 @@ fn get_install_commands(package: &str, available: &[VersionInfo]) -> Vec<String>
             Some(match v.source.as_str() {
                 "brew" => format!("brew install {package}"),
                 "npm" => format!("npm install {}{}", if context.1 { "" } else { "-g " }, package),
-                "pip" => {
+                "pip" | "pypi" => {
                     format!("{} {}", if context.0 { "uv add" } else { "pip install" }, package)
                 }
                 "cargo" => {
                     format!("cargo {} {}", if context.2 { "add" } else { "install" }, package)
                 }
                 "go" => format!("go {} {}", if context.3 { "get" } else { "install" }, package),
+                "pub" => format!("dart pub add {package}"),
                 _ => return None,
             })
         })
