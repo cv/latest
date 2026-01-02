@@ -25,7 +25,7 @@ jobs:
           curl -sL "https://github.com/cv/latest/releases/download/${TAG}/latest.rb" -o latest.rb
           
           # Clone the tap repo
-          git clone "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/cv/homebrew-tap.git" tap
+          git clone "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/cv/homebrew-taps.git" tap
           cd tap
           
           # Update the formula
