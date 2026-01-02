@@ -36,8 +36,15 @@ fn sanitize_output(s: &str) -> String {
     result
 }
 
+const VERSION: &str = if option_env!("GITHUB_ACTIONS").is_some() {
+    env!("CARGO_PKG_VERSION")
+} else {
+    concat!(env!("CARGO_PKG_VERSION"), "-dev")
+};
+
 #[derive(Parser)]
 #[command(name = "latest")]
+#[command(version = VERSION)]
 #[command(about = "Find the latest version of any command, package, or library")]
 #[allow(clippy::struct_excessive_bools)]
 struct Cli {
