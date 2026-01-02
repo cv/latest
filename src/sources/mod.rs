@@ -166,6 +166,12 @@ static PUB: JsonApiSource = JsonApiSource {
     url_template: "https://pub.dev/api/packages/{}",
     version_path: "latest.version",
 };
+static PYPI: JsonApiSource = JsonApiSource {
+    name: "pypi",
+    ecosystem: Ecosystem::Python,
+    url_template: "https://pypi.org/pypi/{}/json",
+    version_path: "info.version",
+};
 
 /// Source definitions: (name, `type_variant`, constructor, `is_local`, ecosystem)
 /// This is the SINGLE source of truth.
@@ -210,6 +216,7 @@ define_sources! {
     "npm",      Npm      => &NPM,           false, Ecosystem::Npm;
     "uv",       Uv       => UvSource,       true,  Ecosystem::Python;
     "pip",      Pip      => PipSource,      true,  Ecosystem::Python;
+    "pypi",     Pypi     => &PYPI,          false, Ecosystem::Python;
     "conda",    Conda    => CondaSource,    false, Ecosystem::Python;
     "go",       Go       => &GO,            false, Ecosystem::Go;
     "cargo",    Cargo    => &CARGO,         false, Ecosystem::Cargo;

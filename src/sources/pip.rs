@@ -1,4 +1,4 @@
-use super::{Ecosystem, Source, extract_version, extract_version_field};
+use super::{Ecosystem, Source, extract_version_field};
 use std::process::Command;
 
 pub struct PipSource;
@@ -19,20 +19,12 @@ impl Source for PipSource {
             Command::new("which").arg(cmd).output().map(|o| o.status.success()).unwrap_or(false)
         })?;
 
-        // Try local install first, then PyPI
+        // Only check locally installed packages
         Command::new(pip)
             .args(["show", package])
             .output()
             .ok()
             .filter(|o| o.status.success())
             .and_then(|o| extract_version_field(&String::from_utf8_lossy(&o.stdout)))
-            .or_else(|| {
-                Command::new(pip)
-                    .args(["index", "versions", package])
-                    .output()
-                    .ok()
-                    .filter(|o| o.status.success())
-                    .and_then(|o| extract_version(&String::from_utf8_lossy(&o.stdout)))
-            })
     }
 }
