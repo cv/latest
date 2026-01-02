@@ -278,10 +278,41 @@ jobs:
 
           gh release create "${{ needs.plan.outputs.tag }}" --target "$RELEASE_COMMIT" $PRERELEASE_FLAG --title "$ANNOUNCEMENT_TITLE" --notes-file "$RUNNER_TEMP/notes.txt" artifacts/*
 
+  # Update the Homebrew tap with the new formula
+  update-homebrew-tap:
+    needs:
+      - plan
+      - host
+    if: ${{ always() && needs.host.result == 'success' && !fromJson(needs.host.outputs.val).announcement_is_prerelease }}
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Update Homebrew tap
+        env:
+          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+          TAG: ${{ needs.plan.outputs.tag }}
+        run: |
+          # Download the generated formula from the release
+          curl -sL "https://github.com/cv/latest/releases/download/${TAG}/latest.rb" -o latest.rb
+          
+          # Clone the tap repo
+          git clone "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/cv/homebrew-taps.git" tap
+          cd tap
+          
+          # Update the formula
+          cp ../latest.rb Formula/latest.rb
+          
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/latest.rb
+          git commit -m "Update latest to ${TAG}"
+          git push
+
   announce:
     needs:
       - plan
       - host
+      - update-homebrew-tap
     # use "always() && ..." to allow us to wait for all publish jobs while
     # still allowing individual publish jobs to skip themselves (for prereleases).
     # "host" however must run to completion, no skipping allowed!
