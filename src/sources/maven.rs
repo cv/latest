@@ -19,10 +19,7 @@ impl Source for MavenSource {
             urlencoding::encode(group),
             urlencoding::encode(artifact)
         );
-        let output = Command::new("curl")
-            .args(["-sf", "-m", "10", &url])
-            .output()
-            .ok()?;
+        let output = Command::new("curl").args(["-sf", "-m", "10", &url]).output().ok()?;
         if !output.status.success() {
             return None;
         }

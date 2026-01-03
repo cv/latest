@@ -13,14 +13,8 @@ impl Source for ComposerSource {
     }
 
     fn get_version(&self, package: &str) -> Option<String> {
-        let url = format!(
-            "https://repo.packagist.org/p2/{}.json",
-            urlencoding::encode(package)
-        );
-        let output = Command::new("curl")
-            .args(["-sf", "-m", "10", &url])
-            .output()
-            .ok()?;
+        let url = format!("https://repo.packagist.org/p2/{}.json", urlencoding::encode(package));
+        let output = Command::new("curl").args(["-sf", "-m", "10", &url]).output().ok()?;
         if !output.status.success() {
             return None;
         }
@@ -45,19 +39,13 @@ mod tests {
     #[test]
     fn test_parse_composer_response() {
         let json = r#"{"packages":{"monolog/monolog":[{"version":"3.5.0"},{"version":"3.4.0"}]}}"#;
-        assert_eq!(
-            parse_composer_response(json, "monolog/monolog"),
-            Some("3.5.0".to_string())
-        );
+        assert_eq!(parse_composer_response(json, "monolog/monolog"), Some("3.5.0".to_string()));
     }
 
     #[test]
     fn test_parse_composer_response_with_v_prefix() {
         let json = r#"{"packages":{"test/pkg":[{"version":"v2.0.0"}]}}"#;
-        assert_eq!(
-            parse_composer_response(json, "test/pkg"),
-            Some("2.0.0".to_string())
-        );
+        assert_eq!(parse_composer_response(json, "test/pkg"), Some("2.0.0".to_string()));
     }
 
     #[test]

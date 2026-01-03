@@ -19,10 +19,7 @@ impl Source for NuGetSource {
             urlencoding::encode(&package.to_lowercase())
         );
 
-        let output = Command::new("curl")
-            .args(["-sf", "-m", "10", &url])
-            .output()
-            .ok()?;
+        let output = Command::new("curl").args(["-sf", "-m", "10", &url]).output().ok()?;
         if !output.status.success() {
             return None;
         }
@@ -36,11 +33,7 @@ fn parse_nuget_versions(json: &str) -> Option<String> {
     let versions = parsed.get("versions")?.as_array()?;
 
     // Filter out prereleases (contain '-') and get last (latest) stable version
-    versions
-        .iter()
-        .filter_map(|v| v.as_str())
-        .rfind(|v| !v.contains('-'))
-        .map(String::from)
+    versions.iter().filter_map(|v| v.as_str()).rfind(|v| !v.contains('-')).map(String::from)
 }
 
 #[cfg(test)]

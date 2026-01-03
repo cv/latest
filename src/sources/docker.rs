@@ -14,21 +14,15 @@ impl Source for DockerSource {
 
     fn get_version(&self, package: &str) -> Option<String> {
         // Handle official images (no slash) vs user images (user/repo)
-        let repo_path = if package.contains('/') {
-            package.to_string()
-        } else {
-            format!("library/{package}")
-        };
+        let repo_path =
+            if package.contains('/') { package.to_string() } else { format!("library/{package}") };
 
         let url = format!(
             "https://registry.hub.docker.com/v2/repositories/{}/tags?page_size=100",
             urlencoding::encode(&repo_path).replace("%2F", "/") // Keep the slash
         );
 
-        let output = Command::new("curl")
-            .args(["-sf", "-m", "10", &url])
-            .output()
-            .ok()?;
+        let output = Command::new("curl").args(["-sf", "-m", "10", &url]).output().ok()?;
         if !output.status.success() {
             return None;
         }
@@ -54,9 +48,7 @@ fn parse_docker_tags(json: &str) -> Option<String> {
             }
             // Try to parse, padding with .0 if needed
             let padded = pad_version(clean);
-            semver::Version::parse(&padded)
-                .ok()
-                .map(|v| (v, tag.to_string()))
+            semver::Version::parse(&padded).ok().map(|v| (v, tag.to_string()))
         })
         .collect();
 
@@ -66,10 +58,7 @@ fn parse_docker_tags(json: &str) -> Option<String> {
 
 fn pad_version(v: &str) -> String {
     // Split on first non-version char (like -alpine, -slim)
-    let base = v
-        .split(|c: char| !c.is_ascii_digit() && c != '.')
-        .next()
-        .unwrap_or(v);
+    let base = v.split(|c: char| !c.is_ascii_digit() && c != '.').next().unwrap_or(v);
     let parts: Vec<&str> = base.split('.').collect();
     match parts.len() {
         1 => format!("{}.0.0", parts[0]),

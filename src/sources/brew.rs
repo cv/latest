@@ -26,10 +26,8 @@ impl Source for BrewSource {
             // redirects aliases (e.g., "npm" -> "node") which would give wrong versions
             let name = formula.get("name").and_then(|n| n.as_str());
             if name == Some(package)
-                && let Some(version) = formula
-                    .get("versions")
-                    .and_then(|v| v.get("stable"))
-                    .and_then(|s| s.as_str())
+                && let Some(version) =
+                    formula.get("versions").and_then(|v| v.get("stable")).and_then(|s| s.as_str())
             {
                 return Some(version.to_string());
             }
@@ -61,10 +59,8 @@ mod tests {
         if let Some(formula) = parsed.get("formulae").and_then(|f| f.get(0)) {
             let name = formula.get("name").and_then(|n| n.as_str());
             if name == Some(package) {
-                if let Some(version) = formula
-                    .get("versions")
-                    .and_then(|v| v.get("stable"))
-                    .and_then(|s| s.as_str())
+                if let Some(version) =
+                    formula.get("versions").and_then(|v| v.get("stable")).and_then(|s| s.as_str())
                 {
                     return Some(version.to_string());
                 }
@@ -86,7 +82,8 @@ mod tests {
     #[test]
     fn test_parse_brew_json() {
         let brew = BrewSource;
-        let formula = r#"{"formulae":[{"name":"ripgrep","versions":{"stable":"1.2.3"}}],"casks":[]}"#;
+        let formula =
+            r#"{"formulae":[{"name":"ripgrep","versions":{"stable":"1.2.3"}}],"casks":[]}"#;
         let cask = r#"{"formulae":[],"casks":[{"token":"firefox","version":"9.9.9"}]}"#;
 
         // Matching names should return versions
@@ -104,7 +101,8 @@ mod tests {
     #[test]
     fn test_brew_alias_rejection() {
         // Simulate what happens when querying "npm" but brew returns "node"
-        let node_json = r#"{"formulae":[{"name":"node","versions":{"stable":"25.2.1"}}],"casks":[]}"#;
+        let node_json =
+            r#"{"formulae":[{"name":"node","versions":{"stable":"25.2.1"}}],"casks":[]}"#;
 
         // Querying "npm" should NOT return node's version
         assert_eq!(parse_brew_json(node_json, "npm"), None);

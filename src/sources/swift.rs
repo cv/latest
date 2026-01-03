@@ -16,10 +16,7 @@ impl Source for SwiftSource {
         let (owner, repo) = parse_github_repo(package)?;
         let url = format!("https://api.github.com/repos/{owner}/{repo}/tags");
 
-        let output = Command::new("curl")
-            .args(["-sf", "-m", "10", &url])
-            .output()
-            .ok()?;
+        let output = Command::new("curl").args(["-sf", "-m", "10", &url]).output().ok()?;
         if !output.status.success() {
             return None;
         }

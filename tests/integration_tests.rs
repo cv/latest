@@ -201,8 +201,7 @@ fn test_source_in_output() {
 
 #[test]
 fn test_json_includes_source() {
-    let output =
-        latest_cmd().args(["--json", "npm:express"]).output().expect("Failed to run");
+    let output = latest_cmd().args(["--json", "npm:express"]).output().expect("Failed to run");
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -228,7 +227,7 @@ fn test_offline_does_not_query_network_sources() {
     // In offline mode, querying a package that only exists in network registries
     // should return "not found" since we only check local sources
     let output = latest_cmd()
-        .args(["--offline", "express"])  // express is only in npm (network)
+        .args(["--offline", "express"]) // express is only in npm (network)
         .output()
         .expect("Failed to run");
 

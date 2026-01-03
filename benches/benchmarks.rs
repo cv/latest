@@ -30,13 +30,9 @@ fn bench_is_newer(c: &mut Criterion) {
 fn bench_parse_package_arg(c: &mut Criterion) {
     let mut group = c.benchmark_group("package_arg_parsing");
 
-    group.bench_function("simple_name", |b| {
-        b.iter(|| parse_package_arg(black_box("express")))
-    });
+    group.bench_function("simple_name", |b| b.iter(|| parse_package_arg(black_box("express"))));
 
-    group.bench_function("with_prefix", |b| {
-        b.iter(|| parse_package_arg(black_box("npm:express")))
-    });
+    group.bench_function("with_prefix", |b| b.iter(|| parse_package_arg(black_box("npm:express"))));
 
     group.bench_function("unknown_prefix", |b| {
         b.iter(|| parse_package_arg(black_box("unknown:express")))
@@ -56,9 +52,7 @@ fn bench_parse_package_arg(c: &mut Criterion) {
 fn bench_extract_version(c: &mut Criterion) {
     let mut group = c.benchmark_group("version_extraction");
 
-    group.bench_function("simple", |b| {
-        b.iter(|| sources::extract_version(black_box("1.2.3")))
-    });
+    group.bench_function("simple", |b| b.iter(|| sources::extract_version(black_box("1.2.3"))));
 
     group.bench_function("with_prefix", |b| {
         b.iter(|| sources::extract_version(black_box("v1.2.3")))
@@ -78,17 +72,13 @@ fn bench_extract_version(c: &mut Criterion) {
 fn bench_source_by_name(c: &mut Criterion) {
     let mut group = c.benchmark_group("source_lookup");
 
-    group.bench_function("first_source", |b| {
-        b.iter(|| sources::source_by_name(black_box("path")))
-    });
+    group.bench_function("first_source", |b| b.iter(|| sources::source_by_name(black_box("path"))));
 
     group.bench_function("middle_source", |b| {
         b.iter(|| sources::source_by_name(black_box("cargo")))
     });
 
-    group.bench_function("last_source", |b| {
-        b.iter(|| sources::source_by_name(black_box("pub")))
-    });
+    group.bench_function("last_source", |b| b.iter(|| sources::source_by_name(black_box("pub"))));
 
     group.bench_function("unknown_source", |b| {
         b.iter(|| sources::source_by_name(black_box("invalid")))

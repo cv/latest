@@ -19,10 +19,7 @@ impl Source for CondaSource {
             return None;
         }
 
-        let output = Command::new("conda")
-            .args(["search", package, "--json"])
-            .output()
-            .ok()?;
+        let output = Command::new("conda").args(["search", package, "--json"]).output().ok()?;
 
         if !output.status.success() {
             return None;

@@ -357,7 +357,9 @@ fn format_result(r: &PackageResult, show_name: bool) -> String {
             let info = r.installed.as_ref().unwrap();
             let installed_marker = if info.local {
                 if info.version == "installed" { " (built-in)" } else { " (installed)" }
-            } else { "" };
+            } else {
+                ""
+            };
             format!("{pkg_prefix}{}: {}{}", info.source, info.version, installed_marker)
         }
         Status::Outdated => {
@@ -365,7 +367,9 @@ fn format_result(r: &PackageResult, show_name: bool) -> String {
             let latest = &r.latest.as_ref().unwrap().version;
             let installed_marker = if installed.local {
                 if installed.version == "installed" { " (built-in)" } else { " (installed)" }
-            } else { "" };
+            } else {
+                ""
+            };
             format!(
                 "{pkg_prefix}{}: {}{} → {} available",
                 installed.source, installed.version, installed_marker, latest
@@ -413,7 +417,9 @@ fn output_results(cli: &Cli, results: &[PackageResult]) {
                 for v in &r.available {
                     let mark = if v.local {
                         if v.version == "installed" { " (built-in)" } else { " (installed)" }
-                    } else { "" };
+                    } else {
+                        ""
+                    };
                     let line = format!("{}: {}{}", v.source, v.version, mark);
                     println!("{}", if results.len() > 1 { format!("  {line}") } else { line });
                 }
@@ -738,9 +744,8 @@ mod tests {
 
     #[test]
     fn test_offline_lookup_finds_local_package() {
-        let sources: Vec<Box<dyn Source>> = vec![
-            mock("path", vec![("node", "25.0.0")], true, Ecosystem::System),
-        ];
+        let sources: Vec<Box<dyn Source>> =
+            vec![mock("path", vec![("node", "25.0.0")], true, Ecosystem::System)];
 
         let r = lookup("node", &sources, LookupMode::Default, false);
         assert_eq!(r.status, Status::UpToDate);
@@ -749,9 +754,7 @@ mod tests {
     #[test]
     fn test_offline_lookup_not_found_when_only_network() {
         // No local sources have the package
-        let sources: Vec<Box<dyn Source>> = vec![
-            mock("path", vec![], true, Ecosystem::System),
-        ];
+        let sources: Vec<Box<dyn Source>> = vec![mock("path", vec![], true, Ecosystem::System)];
 
         let r = lookup("express", &sources, LookupMode::Default, false);
         assert_eq!(r.status, Status::NotFound);
@@ -778,7 +781,11 @@ mod tests {
         // When version is "installed" (unknown version), show "(built-in)" not "(installed)"
         let r = PackageResult::up_to_date(
             "ping",
-            VersionInfo { version: "installed".to_string(), source: "path".to_string(), local: true },
+            VersionInfo {
+                version: "installed".to_string(),
+                source: "path".to_string(),
+                local: true,
+            },
             vec![],
         );
         let output = format_result(&r, false);
