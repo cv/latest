@@ -2,12 +2,23 @@
 
 Find the latest version of any command, package, or library. Scans project files automatically.
 
+## Installation
+
+### macOS (Homebrew)
+
+```bash
+brew install cv/taps/latest
+```
+
+### From source
+
+```bash
+cargo install --path .
+```
+
 ## Quick Start
 
 ```bash
-# Install
-cargo install --path .
-
 # Scan current project
 cd my-rust-project
 latest
